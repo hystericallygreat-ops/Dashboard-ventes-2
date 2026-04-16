@@ -4,19 +4,51 @@ import plotly.express as px
 
 st.set_page_config(page_title="Dashboard Ventes", layout="wide")
 
-# ---------------- STYLE ----------------
+# ---------------- THEME MODERNE ----------------
 st.markdown("""
 <style>
-.metric-card {
-    background: linear-gradient(135deg, #1f2937, #111827);
-    padding: 20px;
-    border-radius: 14px;
-    color: white;
-    text-align: center;
+body {
+    background-color: #f5f7fb;
 }
-.metric-title {font-size: 14px; opacity: 0.7;}
-.metric-value {font-size: 22px; font-weight: bold;}
-.metric-sub {font-size: 14px; opacity: 0.8;}
+
+/* KPI CARDS */
+.metric-card {
+    background: white;
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border-left: 5px solid #4f46e5;
+}
+
+.metric-title {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.metric-value {
+    font-size: 26px;
+    font-weight: bold;
+    color: #111827;
+}
+
+.metric-sub {
+    font-size: 14px;
+    color: #10b981;
+}
+
+/* TITRES */
+h1, h2, h3 {
+    color: #111827;
+}
+
+/* SECTION */
+.section {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 3px 15px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -31,28 +63,24 @@ if uploaded_file:
     code = pd.read_excel(xls, "Code")
     objectifs = pd.read_excel(xls, "Objectifs")
 
-    # Nettoyage des colonnes pour éviter les erreurs de mapping
     df["responder"] = df["responder"].astype(str).str.strip().str.upper()
     code.iloc[:, 0] = code.iloc[:, 0].astype(str).str.strip().str.upper()
 
-    # Merge robuste pour mapping agents
     df = df.merge(
         code.rename(columns={code.columns[0]: "responder", code.columns[1]: "agent"}),
         on="responder",
         how="left"
     )
 
-    # Remplacer les NaN par "Inconnu"
     df["agent"] = df["agent"].fillna("Inconnu")
 
-    # ---------------- KPI GLOBAL ----------------
+    # ---------------- KPI ----------------
     total_sales = len(df)
     objectif_total = objectifs["Objectifs Total"].sum()
     objectif_elec = objectifs["Objectif Elec"].sum()
     objectif_gaz = objectifs["Objectif Gaz"].sum()
 
     ventes_elec = len(df[df["energie"].str.lower() == "elec"])
-    # accepter "gaz" ou "gas"
     ventes_gaz = len(df[df["energie"].str.lower().isin(["gaz", "gas"])])
 
     taux_global = total_sales / objectif_total if objectif_total else 0
@@ -61,102 +89,99 @@ if uploaded_file:
 
     col1, col2, col3 = st.columns(3)
 
-    col1.markdown(f"""
-    <div class='metric-card'>
-      <div class='metric-title'>Ventes Totales</div>
-      <div class='metric-value'>{total_sales}/{objectif_total}</div>
-      <div class='metric-sub'>{taux_global:.1%}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    def kpi_card(col, title, value, taux):
+        col.markdown(f"""
+        <div class='metric-card'>
+            <div class='metric-title'>{title}</div>
+            <div class='metric-value'>{value}</div>
+            <div class='metric-sub'>{taux:.1%}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    col2.markdown(f"""
-    <div class='metric-card'>
-      <div class='metric-title'>Élec</div>
-      <div class='metric-value'>{ventes_elec}/{objectif_elec}</div>
-      <div class='metric-sub'>{taux_elec:.1%}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    kpi_card(col1, "Ventes Totales", f"{total_sales}/{objectif_total}", taux_global)
+    kpi_card(col2, "Électricité", f"{ventes_elec}/{objectif_elec}", taux_elec)
+    kpi_card(col3, "Gaz", f"{ventes_gaz}/{objectif_gaz}", taux_gaz)
 
-    col3.markdown(f"""
-    <div class='metric-card'>
-      <div class='metric-title'>Gaz</div>
-      <div class='metric-value'>{ventes_gaz}/{objectif_gaz}</div>
-      <div class='metric-sub'>{taux_gaz:.1%}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("## 📊 Analyse")
 
-    st.markdown("---")
-
-    # ---------------- GRAPHIQUES ----------------
     colg1, colg2 = st.columns(2)
 
-    with colg1:
-        st.subheader("📦 Ventes par fournisseur")
-        ventes_fournisseur = df.groupby("get_provider").size().reset_index(name="ventes")
-        fig_fournisseur = px.bar(ventes_fournisseur, x="get_provider", y="ventes", title="Ventes par fournisseur", template="plotly_dark")
-        st.plotly_chart(fig_fournisseur, use_container_width=True)
+    # ---------------- GRAPHIQUES ----------------
+    ventes_fournisseur = df.groupby("get_provider").size().reset_index(name="ventes")
 
-    with colg2:
-        st.subheader("👥 Classement agents")
-        ventes_agent = df.groupby("agent").size().reset_index(name="ventes")
-        ventes_agent = ventes_agent.sort_values(by="ventes", ascending=False)
-        fig_agents = px.bar(ventes_agent, x="agent", y="ventes", title="Classement agents", template="plotly_dark")
-        st.plotly_chart(fig_agents, use_container_width=True)
+    fig_fournisseur = px.bar(
+        ventes_fournisseur,
+        x="get_provider",
+        y="ventes",
+        color="ventes",
+        color_continuous_scale="Blues"
+    )
 
-    st.markdown("---")
+    fig_fournisseur.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        title="Ventes par fournisseur",
+        xaxis_title="",
+        yaxis_title="",
+        title_x=0.1
+    )
+
+    colg1.plotly_chart(fig_fournisseur, use_container_width=True)
+
+    ventes_agent = df.groupby("agent").size().reset_index(name="ventes")
+    ventes_agent = ventes_agent.sort_values(by="ventes", ascending=False)
+
+    fig_agents = px.bar(
+        ventes_agent,
+        x="ventes",
+        y="agent",
+        orientation="h",
+        color="ventes",
+        color_continuous_scale="Viridis"
+    )
+
+    fig_agents.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        title="Classement agents",
+        yaxis=dict(autorange="reversed")
+    )
+
+    colg2.plotly_chart(fig_agents, use_container_width=True)
 
     # ---------------- PODIUM ----------------
-    st.subheader("🏆 Top 3")
+    st.markdown("## 🏆 Top 3 Agents")
     top3 = ventes_agent.head(3)
     cols = st.columns(3)
-    for i, row in enumerate(top3.itertuples()):
-        cols[i].markdown(f"""<div class='metric-card'><div class='metric-value'>{row.agent}</div><div>{row.ventes} ventes</div></div>""", unsafe_allow_html=True)
 
-    st.markdown("---")
-    # ---------------- VUE DÉTAILLÉE PAR AGENT ----------------
-    st.subheader("🔍 Vue détaillée par agent")
-    heures = st.number_input("Heures planifiées du mois", min_value=0.0, step=1.0)
-    agent_select = st.selectbox("Choisir un agent", ventes_agent["agent"].dropna().unique())
+    colors = ["#FFD700", "#C0C0C0", "#CD7F32"]
+
+    for i, row in enumerate(top3.itertuples()):
+        cols[i].markdown(f"""
+        <div class='metric-card' style='border-left:5px solid {colors[i]}'>
+            <div class='metric-value'>{row.agent}</div>
+            <div>{row.ventes} ventes</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ---------------- DETAIL ----------------
+    st.markdown("## 🔍 Analyse par agent")
+
+    heures = st.number_input("Heures planifiées", min_value=0.0, step=1.0)
+    agent_select = st.selectbox("Agent", ventes_agent["agent"].unique())
+
     df_agent = df[df["agent"] == agent_select]
 
-    recap_rows = []
-    for fournisseur in objectifs["Fournisseur"].dropna().unique():
-        # Ventes de l’agent pour ce fournisseur
-        df_f = df_agent[df_agent["get_provider"].str.lower() == fournisseur.lower()]
-        ventes_elec = len(df_f[df_f["energie"].str.lower() == "elec"])
-        ventes_gaz = len(df_f[df_f["energie"].str.lower().isin(["gaz", "gas"])])
+    ventes_par_fournisseur = df_agent.groupby("get_provider").size().reset_index(name="ventes")
 
-        # Objectifs individuels par fournisseur
-        obj_row = objectifs[objectifs["Fournisseur"].str.lower() == fournisseur.lower()]
-        obj_total_f = obj_row["Objectifs Total"].sum() if not obj_row.empty else 0
-        obj_elec_f = heures * 0.75 * (obj_row["Objectif Elec"].sum() / objectif_total) if objectif_total else 0
-        obj_gaz_f = heures * 0.75 * (obj_row["Objectif Gaz"].sum() / objectif_total) if objectif_total else 0
+    fig_detail = px.pie(
+        ventes_par_fournisseur,
+        names="get_provider",
+        values="ventes",
+        hole=0.5
+    )
 
-        recap_rows.append({
-            "Fournisseur": fournisseur,
-            "Elec": f"{ventes_elec}/{int(obj_elec_f)}",
-            "Gaz": f"{ventes_gaz}/{int(obj_gaz_f)}"
-        })
-
-    recap_df = pd.DataFrame(recap_rows)
-
-    # Ligne TOTAL avec % de réalisation
-    def parse_ratio(series):
-        ventes = sum(int(x.split('/')[0]) for x in series if '/' in x)
-        obj = sum(int(x.split('/')[1]) for x in series if '/' in x)
-        return ventes, obj
-
-    tot_elec, obj_elec_tot = parse_ratio(recap_df["Elec"])
-    tot_gaz, obj_gaz_tot = parse_ratio(recap_df["Gaz"])
-
-    recap_df.loc["TOTAL"] = {
-        "Fournisseur": "TOTAL",
-        "Elec": f"{tot_elec}/{obj_elec_tot} ({tot_elec/obj_elec_tot:.1%})" if obj_elec_tot else "0/0",
-        "Gaz": f"{tot_gaz}/{obj_gaz_tot} ({tot_gaz/obj_gaz_tot:.1%})" if obj_gaz_tot else "0/0"
-    }
-
-    st.write(f"Objectifs individuels pour {agent_select} (heures planifiées: {heures})")
-    st.dataframe(recap_df, use_container_width=True)
+    st.plotly_chart(fig_detail, use_container_width=True)
 
 else:
     st.info("Veuillez uploader un fichier Excel")
