@@ -20,12 +20,31 @@ body {background-color: #f5f7fb;}
 .metric-value {font-size: 28px; font-weight: bold;}
 .metric-sub {font-size: 14px;}
 
-.section {
+.fournisseur-card {
     background: white;
-    padding: 15px;
+    padding: 12px 15px;
     border-radius: 12px;
-    margin-bottom: 15px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    margin-bottom: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+}
+
+.progress-label {
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+}
+
+.progress-bar-bg {
+    background-color: #e5e7eb;
+    border-radius: 8px;
+    height: 10px;
+    width: 100%;
+}
+
+.progress-bar-fill {
+    height: 10px;
+    border-radius: 8px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -53,7 +72,7 @@ if uploaded_file:
 
     df["agent"] = df["agent"].fillna("Inconnu")
 
-    # ---------------- SIDEBAR FILTRES ----------------
+    # ---------------- SIDEBAR ----------------
     st.sidebar.header("🔎 Filtres")
 
     agents = st.sidebar.multiselect("Agent", df["agent"].unique(), default=df["agent"].unique())
@@ -90,6 +109,8 @@ if uploaded_file:
     kpi(col2, "Élec", ventes_elec, ventes_elec / total_sales if total_sales else 0)
     kpi(col3, "Gaz", ventes_gaz, ventes_gaz / total_sales if total_sales else 0)
 
+    st.markdown("---")
+
     # ---------------- GRAPHIQUES ----------------
     colg1, colg2 = st.columns(2)
 
@@ -109,7 +130,7 @@ if uploaded_file:
 
     st.markdown("---")
 
-    # ---------------- ANALYSE AGENT AVANCÉE ----------------
+    # ---------------- PERFORMANCE DETAILLEE ----------------
     st.subheader("🎯 Performance détaillée")
 
     heures = st.number_input("Heures planifiées", min_value=0.0, step=1.0)
@@ -117,13 +138,13 @@ if uploaded_file:
 
     df_agent = df_filtered[df_filtered["agent"] == agent_select]
 
-    def color_progress(p):
+    def get_color(p):
         if p < 0.7:
-            return "red"
+            return "#ef4444"
         elif p < 1:
-            return "orange"
+            return "#f59e0b"
         else:
-            return "green"
+            return "#10b981"
 
     for fournisseur in objectifs["Fournisseur"].dropna().unique():
 
@@ -134,28 +155,45 @@ if uploaded_file:
 
         obj_row = objectifs[objectifs["Fournisseur"].str.lower() == fournisseur.lower()]
 
-        # 🔥 TA FORMULE CONSERVÉE
+        # 🔥 FORMULE CONSERVÉE
         obj_elec = heures * 0.75 * (obj_row["Objectif Elec"].sum() / objectif_total) if objectif_total else 0
         obj_gaz = heures * 0.75 * (obj_row["Objectif Gaz"].sum() / objectif_total) if objectif_total else 0
 
         p_elec = ventes_elec / obj_elec if obj_elec else 0
         p_gaz = ventes_gaz / obj_gaz if obj_gaz else 0
 
-        st.markdown(f"### {fournisseur}")
+        color_elec = get_color(p_elec)
+        color_gaz = get_color(p_gaz)
 
-        col1, col2 = st.columns(2)
+        st.markdown(f"""
+        <div class="fournisseur-card">
 
-        with col1:
-            st.write(f"⚡ {ventes_elec} / {int(obj_elec)}")
-            st.progress(min(p_elec, 1.0))
+            <b>{fournisseur}</b>
 
-        with col2:
-            st.write(f"🔥 {ventes_gaz} / {int(obj_gaz)}")
-            st.progress(min(p_gaz, 1.0))
+            <div class="progress-label">
+                <span>⚡ Elec</span>
+                <span>{p_elec:.0%} ({ventes_elec} / {int(obj_elec)})</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="
+                    width:{min(p_elec*100,100)}%;
+                    background:{color_elec};
+                "></div>
+            </div>
 
-        # dépassement affiché
-        if p_elec > 1 or p_gaz > 1:
-            st.success("Objectif dépassé 🚀")
+            <div class="progress-label" style="margin-top:8px;">
+                <span>🔥 Gaz</span>
+                <span>{p_gaz:.0%} ({ventes_gaz} / {int(obj_gaz)})</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="
+                    width:{min(p_gaz*100,100)}%;
+                    background:{color_gaz};
+                "></div>
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
 
 else:
     st.info("Veuillez uploader un fichier Excel")
