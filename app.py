@@ -125,19 +125,65 @@ if uploaded_file:
     kpi(col3, "Gaz", ventes_gaz, ventes_gaz / total_sales if total_sales else 0)
 
     # ---------------- GRAPHIQUES ----------------
-    colg1, colg2 = st.columns(2)
+# ---------------- GRAPHIQUES AMÉLIORÉS ----------------
+colg1, colg2 = st.columns(2)
 
-    ventes_fournisseur = df_filtered.groupby("get_provider").size().reset_index(name="ventes")
+# 📦 VENTES PAR FOURNISSEUR (style Power BI)
+ventes_fournisseur = df_filtered.groupby("get_provider").size().reset_index(name="ventes")
+ventes_fournisseur = ventes_fournisseur.sort_values(by="ventes", ascending=True)
 
-    fig1 = px.bar(ventes_fournisseur, x="get_provider", y="ventes")
-    colg1.plotly_chart(fig1, use_container_width=True)
+fig1 = px.bar(
+    ventes_fournisseur,
+    x="ventes",
+    y="get_provider",
+    orientation="h",
+    text="ventes",
+    color="ventes",
+    color_continuous_scale=["#9BC9DD", "#0F8BC6"]
+)
 
-    ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes").sort_values(by="ventes", ascending=False)
+fig1.update_traces(textposition="outside")
 
-    fig2 = px.bar(ventes_agent, x="ventes", y="agent", orientation="h")
-    colg2.plotly_chart(fig2, use_container_width=True)
+fig1.update_layout(
+    title="Ventes par fournisseur",
+    plot_bgcolor="#EDF7FA",
+    paper_bgcolor="#EDF7FA",
+    xaxis_title="",
+    yaxis_title="",
+    coloraxis_showscale=False,
+    margin=dict(l=10, r=10, t=40, b=10)
+)
 
-    st.markdown("---")
+colg1.plotly_chart(fig1, use_container_width=True)
+
+
+# 👥 CLASSEMENT AGENTS (plus clean)
+ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
+ventes_agent = ventes_agent.sort_values(by="ventes", ascending=True)
+
+fig2 = px.bar(
+    ventes_agent,
+    x="ventes",
+    y="agent",
+    orientation="h",
+    text="ventes",
+    color="ventes",
+    color_continuous_scale=["#EEB055", "#8C5C29"]
+)
+
+fig2.update_traces(textposition="outside")
+
+fig2.update_layout(
+    title="Classement agents",
+    plot_bgcolor="#EDF7FA",
+    paper_bgcolor="#EDF7FA",
+    xaxis_title="",
+    yaxis_title="",
+    coloraxis_showscale=False,
+    margin=dict(l=10, r=10, t=40, b=10)
+)
+
+colg2.plotly_chart(fig2, use_container_width=True)
 
     # ---------------- PERFORMANCE COMPACT ----------------
     st.subheader("🎯 Performance détaillée")
