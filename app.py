@@ -2,16 +2,13 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Dashboard Ventes", layout="wide")
+st.set_page_config(page_title="Dashboard SaaS Ventes", layout="wide")
 
 # ---------------- STYLE ----------------
 st.markdown("""
 <style>
-body {
-    background-color: #EDF7FA;
-}
+body {background-color: #EDF7FA;}
 
-/* KPI */
 .metric-card {
     background: white;
     padding: 20px;
@@ -20,35 +17,22 @@ body {
     border-left: 5px solid #0F8BC6;
 }
 
-.metric-title {
-    font-size: 13px;
-    color: #8C5C29;
-}
+.metric-title {font-size: 13px; color: #8C5C29;}
+.metric-value {font-size: 28px; font-weight: bold; color:#0F8BC6;}
+.metric-sub {font-size: 14px; color:#EEB055;}
 
-.metric-value {
-    font-size: 28px;
-    font-weight: bold;
-    color: #0F8BC6;
-}
-
-.metric-sub {
-    font-size: 14px;
-    color: #EEB055;
-}
-
-/* Sidebar */
 section[data-testid="stSidebar"] {
     background-color: #9BC9DD;
 }
 
-/* Headers */
-h1, h2, h3 {
-    color: #0F8BC6;
+/* Progress color */
+.stProgress > div > div > div > div {
+    background-color: #0F8BC6;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Dashboard - Ventes")
+st.title("📊 Dashboard SaaS - Ventes")
 
 uploaded_file = st.file_uploader("Uploader votre fichier Excel", type=["xlsx"])
 
@@ -71,7 +55,7 @@ if uploaded_file:
 
     df["agent"] = df["agent"].fillna("Inconnu")
 
-    # 👉 IMPORTANT : adapte ici le nom de ta colonne date
+    # 👉 adapte si besoin
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
 
     # ---------------- FILTRES ----------------
@@ -81,10 +65,8 @@ if uploaded_file:
     fournisseurs = st.sidebar.multiselect("Fournisseur", df["get_provider"].unique(), default=df["get_provider"].unique())
     energie = st.sidebar.multiselect("Énergie", df["energie"].unique(), default=df["energie"].unique())
 
-    # 📅 FILTRE DATE
     min_date = df["date"].min()
     max_date = df["date"].max()
-
     date_range = st.sidebar.date_input("Période", [min_date, max_date])
 
     df_filtered = df[
@@ -93,7 +75,6 @@ if uploaded_file:
         (df["energie"].isin(energie))
     ]
 
-    # appliquer filtre date
     if len(date_range) == 2:
         df_filtered = df_filtered[
             (df_filtered["date"] >= pd.to_datetime(date_range[0])) &
@@ -124,66 +105,58 @@ if uploaded_file:
     kpi(col2, "Élec", ventes_elec, ventes_elec / total_sales if total_sales else 0)
     kpi(col3, "Gaz", ventes_gaz, ventes_gaz / total_sales if total_sales else 0)
 
+    st.markdown("---")
+
     # ---------------- GRAPHIQUES ----------------
-# ---------------- GRAPHIQUES AMÉLIORÉS ----------------
-colg1, colg2 = st.columns(2)
+    colg1, colg2 = st.columns(2)
 
-# 📦 VENTES PAR FOURNISSEUR (style Power BI)
-ventes_fournisseur = df_filtered.groupby("get_provider").size().reset_index(name="ventes")
-ventes_fournisseur = ventes_fournisseur.sort_values(by="ventes", ascending=True)
+    ventes_fournisseur = df_filtered.groupby("get_provider").size().reset_index(name="ventes")
+    ventes_fournisseur = ventes_fournisseur.sort_values(by="ventes")
 
-fig1 = px.bar(
-    ventes_fournisseur,
-    x="ventes",
-    y="get_provider",
-    orientation="h",
-    text="ventes",
-    color="ventes",
-    color_continuous_scale=["#9BC9DD", "#0F8BC6"]
-)
+    fig1 = px.bar(
+        ventes_fournisseur,
+        x="ventes",
+        y="get_provider",
+        orientation="h",
+        text="ventes",
+        color="ventes",
+        color_continuous_scale=["#9BC9DD", "#0F8BC6"]
+    )
 
-fig1.update_traces(textposition="outside")
+    fig1.update_traces(textposition="outside")
+    fig1.update_layout(
+        title="Ventes par fournisseur",
+        plot_bgcolor="#EDF7FA",
+        paper_bgcolor="#EDF7FA",
+        coloraxis_showscale=False
+    )
 
-fig1.update_layout(
-    title="Ventes par fournisseur",
-    plot_bgcolor="#EDF7FA",
-    paper_bgcolor="#EDF7FA",
-    xaxis_title="",
-    yaxis_title="",
-    coloraxis_showscale=False,
-    margin=dict(l=10, r=10, t=40, b=10)
-)
+    colg1.plotly_chart(fig1, use_container_width=True)
 
-colg1.plotly_chart(fig1, use_container_width=True)
+    ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
+    ventes_agent = ventes_agent.sort_values(by="ventes")
 
+    fig2 = px.bar(
+        ventes_agent,
+        x="ventes",
+        y="agent",
+        orientation="h",
+        text="ventes",
+        color="ventes",
+        color_continuous_scale=["#EEB055", "#8C5C29"]
+    )
 
-# 👥 CLASSEMENT AGENTS (plus clean)
-ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
-ventes_agent = ventes_agent.sort_values(by="ventes", ascending=True)
+    fig2.update_traces(textposition="outside")
+    fig2.update_layout(
+        title="Classement agents",
+        plot_bgcolor="#EDF7FA",
+        paper_bgcolor="#EDF7FA",
+        coloraxis_showscale=False
+    )
 
-fig2 = px.bar(
-    ventes_agent,
-    x="ventes",
-    y="agent",
-    orientation="h",
-    text="ventes",
-    color="ventes",
-    color_continuous_scale=["#EEB055", "#8C5C29"]
-)
+    colg2.plotly_chart(fig2, use_container_width=True)
 
-fig2.update_traces(textposition="outside")
-
-fig2.update_layout(
-    title="Classement agents",
-    plot_bgcolor="#EDF7FA",
-    paper_bgcolor="#EDF7FA",
-    xaxis_title="",
-    yaxis_title="",
-    coloraxis_showscale=False,
-    margin=dict(l=10, r=10, t=40, b=10)
-)
-
-colg2.plotly_chart(fig2, use_container_width=True)
+    st.markdown("---")
 
     # ---------------- PERFORMANCE COMPACT ----------------
     st.subheader("🎯 Performance détaillée")
@@ -220,13 +193,11 @@ colg2.plotly_chart(fig2, use_container_width=True)
             "obj_gaz": int(obj_gaz) if obj_gaz > 0 else 0
         })
 
-    # tri
     rows = sorted(rows, key=lambda x: x["p_total"], reverse=True)
 
     def emoji(p):
         return "🟢" if p >= 1 else "🟠" if p >= 0.7 else "🔴"
 
-    # 👉 AFFICHAGE ULTRA COMPACT EN LIGNE
     for r in rows:
         col1, col2, col3 = st.columns([2, 4, 4])
 
