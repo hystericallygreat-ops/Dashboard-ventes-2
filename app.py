@@ -2,81 +2,53 @@ import streamlit as st
 import pandas as pd
 import os
 import math
-import base64
 
 st.set_page_config(page_title="Dashboard Ventes", layout="wide")
 
 SAVE_PATH = "last_uploaded.xlsx"
 
-# ---------------- STYLE HELLO WATT ----------------
+# ---------------- STYLE ----------------
 st.markdown("""
 <style>
-body {
-    background-color: #F5FAFD;
-}
+body {background-color: #F5FAFD;}
 
-h1, h2, h3 {
-    color: #0F8BC6;
-}
-
-.metric {
-    background: white;
-    padding: 18px;
-    border-radius: 12px;
-    border-left: 5px solid #0F8BC6;
-}
+h1, h2, h3 {color:#0F8BC6;}
 
 .stProgress > div > div > div > div {
     background-color: #0F8BC6;
 }
-
-.sidebar .sidebar-content {
-    background-color: #EAF6FB;
-}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- AUTH ADMIN ----------------
-st.sidebar.header("🔐 Accès")
+# ---------------- LOGO (SOLUTION 3) ----------------
+st.image(
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Hello_Watt_logo.png/320px-Hello_Watt_logo.png",
+    width=180
+)
+
+# ---------------- AUTH ----------------
+st.sidebar.header("🔐 Accès Admin")
 
 password = st.sidebar.text_input("Mot de passe", type="password")
-ADMIN_PASSWORD = "hello123"
+
+ADMIN_PASSWORD = "hello123"  # 🔥 change ici
+
 is_admin = password == ADMIN_PASSWORD
 
-# ---------------- LOGO ----------------
-def get_base64(file):
-    with open(file, "rb") as f:
-        return base64.b64encode(f.read()).decode()
-
-img = get_base64("hello_watt.png")
-
-st.markdown(f"""
-<div style="text-align:center; margin-bottom:20px;">
-    <img src="data:image/png;base64,{img}" width="180">
-</div>
-""", unsafe_allow_html=True)
-
-# ---------------- STATE ----------------
-if "show_upload" not in st.session_state:
-    st.session_state["show_upload"] = False
-
-# ---------------- LOGO BOUTON ADMIN ----------------
-if is_admin:
-    if st.button("📂 Charger fichier"):
-        st.session_state["show_upload"] = True
-
-# ---------------- UPLOAD ----------------
+# ---------------- UPLOAD ADMIN ----------------
 uploaded_file = None
 
-if is_admin and st.session_state["show_upload"]:
-    uploaded_file = st.file_uploader("Uploader votre fichier Excel", type=["xlsx"])
+if is_admin:
+    st.sidebar.success("Mode Admin activé")
+
+    uploaded_file = st.sidebar.file_uploader("Uploader fichier Excel", type=["xlsx"])
 
     if uploaded_file is not None:
         with open(SAVE_PATH, "wb") as f:
             f.write(uploaded_file.getbuffer())
 
     if os.path.exists(SAVE_PATH):
-        if st.button("🗑 Supprimer le fichier"):
+        if st.sidebar.button("🗑 Supprimer fichier"):
             os.remove(SAVE_PATH)
             st.rerun()
 
@@ -100,6 +72,7 @@ if uploaded_file:
     code = pd.read_excel(xls, "Code")
     objectifs = pd.read_excel(xls, "Objectifs")
 
+    # CLEAN
     df["responder"] = df["responder"].astype(str).str.strip().str.upper()
     code.iloc[:, 0] = code.iloc[:, 0].astype(str).str.strip().str.upper()
 
@@ -229,4 +202,4 @@ if uploaded_file:
             st.progress(min(taux, 1.0))
 
 else:
-    st.info("Veuillez uploader un fichier Excel")
+    st.info("Veuillez uploader un fichier Excel (admin uniquement)")
