@@ -21,66 +21,27 @@ if os.path.exists(SAVE_PATH):
         os.remove(SAVE_PATH)
         st.rerun()
 
-# ---------------- STYLE ULTRA SAAS ----------------
+# ---------------- STYLE ----------------
 st.markdown("""
 <style>
+body {background-color: #F7F9FB;}
 
-/* GLOBAL */
-body {
-    background-color: #F7F9FB;
-}
+h1, h2, h3 {color:#0F172A;}
 
-/* TITRES */
-h1, h2, h3 {
-    font-weight: 600;
-    color: #0F172A;
-}
-
-/* KPI CARDS */
 .card {
     background: white;
-    padding: 22px;
+    padding: 20px;
     border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.05);
 }
 
-.kpi-title {
-    font-size: 13px;
-    color: #64748B;
-}
+.kpi-title {font-size:13px;color:#64748B;}
+.kpi-value {font-size:30px;font-weight:bold;}
+.kpi-sub {font-size:14px;color:#22C55E;}
 
-.kpi-value {
-    font-size: 32px;
-    font-weight: 700;
-    color: #0F172A;
-}
-
-.kpi-sub {
-    font-size: 14px;
-    color: #22C55E;
-}
-
-/* PROGRESS BAR */
 .stProgress > div > div > div > div {
     background: linear-gradient(90deg, #3B82F6, #06B6D4);
-    border-radius: 10px;
 }
-
-/* LIST CARDS */
-.list-card {
-    background: white;
-    padding: 15px;
-    border-radius: 14px;
-    margin-bottom: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
-}
-
-/* SIDEBAR */
-section[data-testid="stSidebar"] {
-    background-color: #FFFFFF;
-    border-right: 1px solid #E5E7EB;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -122,7 +83,6 @@ if uploaded_file:
     # ---------------- KPI ----------------
     total_sales = len(df_filtered)
     objectif_total = objectifs["Objectifs Total"].sum()
-
     taux_global = total_sales / objectif_total if objectif_total else 0
 
     col1, col2, col3 = st.columns(3)
@@ -136,13 +96,17 @@ if uploaded_file:
         </div>
         """, unsafe_allow_html=True)
 
-    kpi(col1, "Ventes Totales", total_sales, taux_global)
-    kpi(col2, "Objectif Global", int(objectif_total), 1)
+    kpi(col1, "Ventes", total_sales, taux_global)
+    kpi(col2, "Objectif", int(objectif_total), 1)
     kpi(col3, "Progression", "", taux_global)
 
     st.markdown("---")
 
-    # ---------------- OBJECTIF FOURNISSEUR ----------------
+    # ---------------- EMOJI ----------------
+    def emoji(p):
+        return "🟢" if p >= 1 else "🟠" if p >= 0.7 else "🔴"
+
+    # ---------------- FOURNISSEURS ----------------
     st.subheader("🏢 Performance Fournisseurs")
 
     objectif_global_185h = 185 * 0.75
@@ -156,7 +120,6 @@ if uploaded_file:
     rows = []
 
     for _, row in ventes_fournisseur.iterrows():
-
         fournisseur = row["get_provider"]
         ventes = row["ventes"]
 
@@ -171,27 +134,32 @@ if uploaded_file:
 
         rows.append((fournisseur, ventes, objectif_fournisseur, taux))
 
-    # TRI BEST → WORST
     rows = sorted(rows, key=lambda x: x[3], reverse=True)
-
-    def emoji(p):
-        return "🟢" if p >= 1 else "🟠" if p >= 0.7 else "🔴"
 
     for f, v, obj, t in rows:
 
-        st.markdown(f"""
-        <div class="list-card">
-            <b>{f}</b><br>
-            {emoji(t)} {v} / {int(obj)} ({t:.0%})
-        </div>
-        """, unsafe_allow_html=True)
+        col1, col2 = st.columns([6, 1])
 
-        st.progress(min(t, 1.0))
+        with col1:
+            st.markdown(f"""
+            <div style="display:flex; align-items:center;">
+                <div style="flex-grow:1;">
+                    <b>{f}</b><br>
+                    <span style="font-size:12px;color:gray;">
+                    {v} / {int(obj)} ({t:.0%})
+                    </span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.progress(min(t, 1.0))
+
+        with col2:
+            st.write(emoji(t))
 
     st.markdown("---")
 
-    # ---------------- OBJECTIF AGENTS ----------------
-    st.subheader("👤 Performance Agents (base 185h)")
+    # ---------------- AGENTS COMPACT ----------------
+    st.subheader("👤 Performance Agents")
 
     ventes_agent = (
         df_filtered.groupby("agent")
@@ -199,16 +167,14 @@ if uploaded_file:
         .reset_index(name="ventes")
     )
 
+    objectif_agent = 185 * 0.75
+
     rows = []
 
     for _, row in ventes_agent.iterrows():
-
         agent = row["agent"]
         ventes = row["ventes"]
-
-        objectif_agent = objectif_global_185h
         taux = ventes / objectif_agent if objectif_agent else 0
-
         rows.append((agent, ventes, objectif_agent, taux))
 
     rows = sorted(rows, key=lambda x: x[3], reverse=True)
@@ -216,21 +182,37 @@ if uploaded_file:
     for a, v, obj, t in rows:
 
         st.markdown(f"""
-        <div class="list-card">
-            <b>{a}</b><br>
-            {emoji(t)} {v} / {int(obj)} ({t:.0%})
-        </div>
+        <div style="
+            display:flex;
+            align-items:center;
+            margin-bottom:6px;
+            gap:10px;
+        ">
+            <div style="width:140px;">
+                <b>{a}</b>
+            </div>
+
+            <div style="flex-grow:1;">
         """, unsafe_allow_html=True)
 
         st.progress(min(t, 1.0))
 
+        st.markdown(f"""
+            </div>
+
+            <div style="width:140px; text-align:right; font-size:12px;">
+                {emoji(t)} {v}/{int(obj)} ({t:.0%})
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.markdown("---")
 
-    # ---------------- PERFORMANCE DETAIL ----------------
-    st.subheader("🎯 Détail par Agent")
+    # ---------------- DETAIL ----------------
+    st.subheader("🎯 Détail Agent")
 
     heures = st.number_input("Heures travaillées", value=185.0)
-    agent_select = st.selectbox("Choisir un agent", df_filtered["agent"].unique())
+    agent_select = st.selectbox("Agent", df_filtered["agent"].unique())
 
     df_agent = df_filtered[df_filtered["agent"] == agent_select]
 
