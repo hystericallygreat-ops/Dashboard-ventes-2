@@ -2,25 +2,87 @@ import streamlit as st
 import pandas as pd
 import os
 import math
+import base64
 
-st.set_page_config(page_title="Dashboard SaaS Ventes", layout="wide")
+st.set_page_config(page_title="Dashboard Ventes", layout="wide")
 
-# ---------------- CONFIG FICHIER ----------------
 SAVE_PATH = "last_uploaded.xlsx"
 
-uploaded_file = st.file_uploader("Uploader votre fichier Excel", type=["xlsx"])
+# ---------------- STYLE HELLO WATT ----------------
+st.markdown("""
+<style>
+body {
+    background-color: #F5FAFD;
+}
 
-if uploaded_file is not None:
-    with open(SAVE_PATH, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+h1, h2, h3 {
+    color: #0F8BC6;
+}
 
-if uploaded_file is None and os.path.exists(SAVE_PATH):
-    uploaded_file = SAVE_PATH
+.metric {
+    background: white;
+    padding: 18px;
+    border-radius: 12px;
+    border-left: 5px solid #0F8BC6;
+}
 
-if os.path.exists(SAVE_PATH):
-    if st.sidebar.button("🗑 Supprimer le fichier chargé"):
-        os.remove(SAVE_PATH)
-        st.rerun()
+.stProgress > div > div > div > div {
+    background-color: #0F8BC6;
+}
+
+.sidebar .sidebar-content {
+    background-color: #EAF6FB;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- AUTH ADMIN ----------------
+st.sidebar.header("🔐 Accès")
+
+password = st.sidebar.text_input("Mot de passe", type="password")
+ADMIN_PASSWORD = "hello123"
+is_admin = password == ADMIN_PASSWORD
+
+# ---------------- LOGO ----------------
+def get_base64(file):
+    with open(file, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+img = get_base64("hello_watt.png")
+
+st.markdown(f"""
+<div style="text-align:center; margin-bottom:20px;">
+    <img src="data:image/png;base64,{img}" width="180">
+</div>
+""", unsafe_allow_html=True)
+
+# ---------------- STATE ----------------
+if "show_upload" not in st.session_state:
+    st.session_state["show_upload"] = False
+
+# ---------------- LOGO BOUTON ADMIN ----------------
+if is_admin:
+    if st.button("📂 Charger fichier"):
+        st.session_state["show_upload"] = True
+
+# ---------------- UPLOAD ----------------
+uploaded_file = None
+
+if is_admin and st.session_state["show_upload"]:
+    uploaded_file = st.file_uploader("Uploader votre fichier Excel", type=["xlsx"])
+
+    if uploaded_file is not None:
+        with open(SAVE_PATH, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+
+    if os.path.exists(SAVE_PATH):
+        if st.button("🗑 Supprimer le fichier"):
+            os.remove(SAVE_PATH)
+            st.rerun()
+
+else:
+    if os.path.exists(SAVE_PATH):
+        uploaded_file = SAVE_PATH
 
 # ---------------- MENU ----------------
 page = st.sidebar.radio("Navigation", [
@@ -29,7 +91,7 @@ page = st.sidebar.radio("Navigation", [
     "🏢 Objectifs Globaux"
 ])
 
-# ---------------- SI FICHIER ----------------
+# ---------------- APP ----------------
 if uploaded_file:
 
     xls = pd.ExcelFile(uploaded_file)
@@ -38,7 +100,6 @@ if uploaded_file:
     code = pd.read_excel(xls, "Code")
     objectifs = pd.read_excel(xls, "Objectifs")
 
-    # CLEAN
     df["responder"] = df["responder"].astype(str).str.strip().str.upper()
     code.iloc[:, 0] = code.iloc[:, 0].astype(str).str.strip().str.upper()
 
@@ -52,8 +113,6 @@ if uploaded_file:
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
 
     # FILTRES
-    st.sidebar.header("🔎 Filtres")
-
     agents = st.sidebar.multiselect("Agent", df["agent"].unique(), default=df["agent"].unique())
     fournisseurs = st.sidebar.multiselect("Fournisseur", df["get_provider"].unique(), default=df["get_provider"].unique())
 
@@ -67,9 +126,7 @@ if uploaded_file:
     def emoji(p):
         return "🟢" if p >= 1 else "🟠" if p >= 0.7 else "🔴"
 
-    # =========================================================
-    # 📊 DASHBOARD
-    # =========================================================
+    # ---------------- DASHBOARD ----------------
     if page == "📊 Dashboard":
 
         st.title("📊 Dashboard")
@@ -84,7 +141,6 @@ if uploaded_file:
 
         st.markdown("---")
 
-        # PERFORMANCE DETAILLEE
         st.subheader("🎯 Performance détaillée")
 
         heures = st.number_input("Heures planifiées", value=185.0)
@@ -92,7 +148,6 @@ if uploaded_file:
 
         df_agent = df_filtered[df_filtered["agent"] == agent_select]
 
-        # HEADER TABLE
         col1, col2, col3 = st.columns([2, 4, 4])
         col1.markdown("**Fournisseur**")
         col2.markdown("**⚡ Elec**")
@@ -129,9 +184,7 @@ if uploaded_file:
                 st.caption(f"{emoji(p_gaz)} {ventes_gaz}/{obj_gaz} ({p_gaz:.0%})")
                 st.progress(min(p_gaz, 1.0))
 
-    # =========================================================
-    # 👤 PERFORMANCE AGENTS
-    # =========================================================
+    # ---------------- AGENTS ----------------
     elif page == "👤 Performance Agents":
 
         st.title("👤 Performance Agents")
@@ -154,9 +207,7 @@ if uploaded_file:
             with col2:
                 st.progress(min(row["taux"], 1.0))
 
-    # =========================================================
-    # 🏢 OBJECTIFS GLOBAUX
-    # =========================================================
+    # ---------------- OBJECTIFS ----------------
     elif page == "🏢 Objectifs Globaux":
 
         st.title("🏢 Objectifs Globaux")
