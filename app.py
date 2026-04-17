@@ -1,8 +1,29 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import os
 
-st.set_page_config(page_title="Dashboard Ventes", layout="wide")
+st.set_page_config(page_title="Dashboard SaaS Ventes", layout="wide")
+
+# ---------------- CONFIG FICHIER ----------------
+SAVE_PATH = "last_uploaded.xlsx"
+
+uploaded_file = st.file_uploader("Uploader votre fichier Excel", type=["xlsx"])
+
+# Sauvegarde du fichier uploadé
+if uploaded_file is not None:
+    with open(SAVE_PATH, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+
+# Recharge automatique si déjà présent
+if uploaded_file is None and os.path.exists(SAVE_PATH):
+    uploaded_file = SAVE_PATH
+
+# Bouton suppression
+if os.path.exists(SAVE_PATH):
+    if st.sidebar.button("🗑 Supprimer le fichier chargé"):
+        os.remove(SAVE_PATH)
+        st.rerun()
 
 # ---------------- STYLE ----------------
 st.markdown("""
@@ -25,25 +46,24 @@ section[data-testid="stSidebar"] {
     background-color: #9BC9DD;
 }
 
-/* Progress color */
 .stProgress > div > div > div > div {
     background-color: #0F8BC6;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Dashboard - Ventes")
+st.title("📊 Dashboard SaaS - Ventes")
 
-uploaded_file = st.file_uploader("Uploader votre fichier Excel", type=["xlsx"])
-
+# ---------------- SI FICHIER ----------------
 if uploaded_file:
+
     xls = pd.ExcelFile(uploaded_file)
 
     df = pd.read_excel(xls, "Extraction")
     code = pd.read_excel(xls, "Code")
     objectifs = pd.read_excel(xls, "Objectifs")
 
-    # ---------------- CLEAN ----------------
+    # CLEAN
     df["responder"] = df["responder"].astype(str).str.strip().str.upper()
     code.iloc[:, 0] = code.iloc[:, 0].astype(str).str.strip().str.upper()
 
@@ -55,7 +75,6 @@ if uploaded_file:
 
     df["agent"] = df["agent"].fillna("Inconnu")
 
-    # 👉 adapte si besoin
     df["date"] = pd.to_datetime(df["date"], errors="coerce")
 
     # ---------------- FILTRES ----------------
@@ -110,8 +129,7 @@ if uploaded_file:
     # ---------------- GRAPHIQUES ----------------
     colg1, colg2 = st.columns(2)
 
-    ventes_fournisseur = df_filtered.groupby("get_provider").size().reset_index(name="ventes")
-    ventes_fournisseur = ventes_fournisseur.sort_values(by="ventes")
+    ventes_fournisseur = df_filtered.groupby("get_provider").size().reset_index(name="ventes").sort_values(by="ventes")
 
     fig1 = px.bar(
         ventes_fournisseur,
@@ -122,19 +140,12 @@ if uploaded_file:
         color="ventes",
         color_continuous_scale=["#9BC9DD", "#0F8BC6"]
     )
-
     fig1.update_traces(textposition="outside")
-    fig1.update_layout(
-        title="Ventes par fournisseur",
-        plot_bgcolor="#EDF7FA",
-        paper_bgcolor="#EDF7FA",
-        coloraxis_showscale=False
-    )
+    fig1.update_layout(plot_bgcolor="#EDF7FA", paper_bgcolor="#EDF7FA", coloraxis_showscale=False)
 
     colg1.plotly_chart(fig1, use_container_width=True)
 
-    ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
-    ventes_agent = ventes_agent.sort_values(by="ventes")
+    ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes").sort_values(by="ventes")
 
     fig2 = px.bar(
         ventes_agent,
@@ -145,20 +156,14 @@ if uploaded_file:
         color="ventes",
         color_continuous_scale=["#EEB055", "#8C5C29"]
     )
-
     fig2.update_traces(textposition="outside")
-    fig2.update_layout(
-        title="Classement agents",
-        plot_bgcolor="#EDF7FA",
-        paper_bgcolor="#EDF7FA",
-        coloraxis_showscale=False
-    )
+    fig2.update_layout(plot_bgcolor="#EDF7FA", paper_bgcolor="#EDF7FA", coloraxis_showscale=False)
 
     colg2.plotly_chart(fig2, use_container_width=True)
 
     st.markdown("---")
 
-    # ---------------- PERFORMANCE COMPACT ----------------
+    # ---------------- PERFORMANCE ----------------
     st.subheader("🎯 Performance détaillée")
 
     heures = st.number_input("Heures planifiées", min_value=0.0, step=1.0)
