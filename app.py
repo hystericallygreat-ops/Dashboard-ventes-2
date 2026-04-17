@@ -7,7 +7,7 @@ st.set_page_config(page_title="HelloWatt Dashboard", layout="wide")
 
 SAVE_PATH = "last_uploaded.xlsx"
 
-# ---------------- STYLE HELLOWATT ----------------
+# ---------------- STYLE GLOBAL ----------------
 st.markdown("""
 <style>
 html, body {
@@ -20,7 +20,6 @@ html, body {
     font-weight: 700;
     color: #0F8BC6;
 }
-
 .subheader {
     color: #64748B;
     font-size: 14px;
@@ -43,16 +42,47 @@ html, body {
 section[data-testid="stSidebar"] {
     background-color: #EDF7FA;
 }
+
+/* Texte sidebar */
+section[data-testid="stSidebar"] * {
+    color: #0F172A !important;
+}
+
+/* -------- TAGS MULTISELECT (VERSION DOUCE) -------- */
+[data-baseweb="tag"] {
+    background-color: #E0F2FE !important;
+    color: #0369A1 !important;
+    border-radius: 8px;
+    border: none;
+    font-weight: 500;
+}
+
+/* Croix X */
+[data-baseweb="tag"] span {
+    color: #0369A1 !important;
+}
+
+/* Hover */
+[data-baseweb="tag"]:hover {
+    background-color: #BAE6FD !important;
+}
+
+/* Boutons */
+.stButton > button {
+    background-color: #0F8BC6;
+    color: white;
+    border-radius: 8px;
+    border: none;
+}
+.stButton > button:hover {
+    background-color: #0B6FA4;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- HEADER ----------------
-col1, col2 = st.columns([6,1])
-
-with col1:
-    st.markdown('<div class="header">HelloWatt</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subheader">Dashboard de performance commerciale</div>', unsafe_allow_html=True)
-
+st.markdown('<div class="header">HelloWatt</div>', unsafe_allow_html=True)
+st.markdown('<div class="subheader">Dashboard de performance commerciale</div>', unsafe_allow_html=True)
 st.markdown("---")
 
 # ---------------- AUTH ----------------
@@ -75,7 +105,6 @@ if is_admin:
         if st.sidebar.button("🗑 Supprimer"):
             os.remove(SAVE_PATH)
             st.rerun()
-
 else:
     if os.path.exists(SAVE_PATH):
         uploaded_file = SAVE_PATH
