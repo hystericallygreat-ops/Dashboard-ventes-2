@@ -20,11 +20,14 @@ h1, h2, h3 {color:#0F8BC6;}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- LOGO (SOLUTION 3) ----------------
-st.image(
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Hello_Watt_logo.png/320px-Hello_Watt_logo.png",
-    width=180
-)
+# ---------------- LOGO ----------------
+try:
+    st.image(
+        "https://logo.clearbit.com/hellowatt.fr",
+        width=180
+    )
+except:
+    st.markdown("## Hello Watt")
 
 # ---------------- AUTH ----------------
 st.sidebar.header("🔐 Accès Admin")
