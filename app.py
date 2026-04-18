@@ -13,8 +13,9 @@ SAVE_PATH = "last_uploaded.xlsx"
 st.markdown("""
 <style>
 
+/* Responsive largeur dynamique */
 .block-container {
-    max-width: 1150px;
+    max-width: 100% !important;
     padding-top: 3rem;
 }
 
@@ -115,8 +116,10 @@ def get_working_days():
     fr_holidays = holidays.FR()
 
     days = pd.date_range(start, today)
-    working_days = [d for d in days if d.weekday() < 5 and d.date() not in fr_holidays]
-
+    working_days = [
+        d for d in days
+        if d.weekday() < 5 and d.date() not in fr_holidays
+    ]
     return len(working_days)
 
 # ---------------- APP ----------------
@@ -186,8 +189,6 @@ if uploaded_file:
         c2.metric("🔥 Gaz", f"{ventes_gaz}/{objectif_gaz_total}", f"{ventes_gaz/objectif_gaz_total:.0%}")
         c3.metric("🏆 Total", f"{ventes_total}/{objectif_total}", f"{ventes_total/objectif_total:.0%}")
 
-        st.markdown("")
-
         ventes_fournisseur = df_filtered.groupby("get_provider").size().reset_index(name="ventes")
 
         df_obj = objectifs.merge(
@@ -201,11 +202,9 @@ if uploaded_file:
         df_obj = df_obj.sort_values("Objectifs Total", ascending=False)
 
         for _, r in df_obj.iterrows():
-
             p = r["ventes"] / r["Objectifs Total"] if r["Objectifs Total"] else 0
 
             col1, col2, col3 = st.columns([3,6,2])
-
             col1.markdown(f"**{r['Fournisseur']}**")
             col2.progress(min(p,1.0))
             col3.markdown(f"{emoji(p)} {int(r['ventes'])}/{int(r['Objectifs Total'])} ({p:.0%})")
@@ -226,12 +225,14 @@ if uploaded_file:
 
         for _, r in ventes_agent.iterrows():
 
+            ventes_jour = round(r["kpi_jour"], 1)
+
             col1, col2, col3, col4 = st.columns([3,5,2,2])
 
             col1.markdown(f"**{r['agent']}**")
             col2.progress(min(r["taux"],1.0))
             col3.markdown(f"{emoji(r['taux'])} {r['ventes']}/{objectif_agent} ({r['taux']:.0%})")
-            col4.markdown(f"📅 {r['ventes']}/{jours_travailles}")
+            col4.markdown(f"📅 {ventes_jour}/J")
 
     # ---------------- OBJECTIFS ----------------
     elif page == "🎯 Objectifs":
@@ -247,7 +248,6 @@ if uploaded_file:
         ventes_total_agent = len(df_agent)
         taux_agent = ventes_total_agent / objectif_agent if objectif_agent else 0
 
-        # CARD AGENT
         st.markdown('<div class="agent-card">', unsafe_allow_html=True)
 
         col1, col2, col3 = st.columns([3,6,2])
