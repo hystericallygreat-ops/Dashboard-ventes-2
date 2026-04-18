@@ -2,74 +2,45 @@ import streamlit as st
 import pandas as pd
 import os
 import math
+from datetime import datetime
+import holidays
 
 st.set_page_config(page_title="HelloWatt Dashboard", layout="wide")
 
 SAVE_PATH = "last_uploaded.xlsx"
 
-# ---------------- STYLE PREMIUM ----------------
+# ---------------- STYLE ----------------
 st.markdown("""
 <style>
 
-/* GLOBAL */
 .block-container {
-    max-width: 1100px;
-    padding-top: 1rem;
+    max-width: 1150px;
+    padding-top: 3rem;
 }
 
-/* HEADER */
-.header {
-    font-size:32px;
-    font-weight:700;
-    color:#0F8BC6;
-    margin-bottom:0;
-}
-.subheader {
-    color:#64748B;
-    font-size:14px;
-    margin-top:-5px;
+/* HERO */
+.hero {
+    background: linear-gradient(135deg, #E0F2FE 0%, #EDF7FA 100%);
+    padding: 20px;
+    border-radius: 14px;
+    margin-bottom: 15px;
 }
 
-/* KPI CARDS */
+/* CARD */
 .card {
     background: white;
-    padding:16px;
-    border-radius:12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-    text-align:center;
-}
-.card-title {
-    font-size:13px;
-    color:#64748B;
-}
-.card-value {
-    font-size:22px;
-    font-weight:700;
-}
-.card-sub {
-    font-size:13px;
-    color:#0F8BC6;
+    padding: 14px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.04);
 }
 
-/* SIDEBAR */
-section[data-testid="stSidebar"] {
-    background-color:#EDF7FA;
-}
-section[data-testid="stSidebar"] * {
-    color:#0F172A !important;
-}
-
-/* TAGS */
-[data-baseweb="tag"] {
-    background-color:#E0F2FE !important;
-    color:#0369A1 !important;
-}
-
-/* BUTTON */
-.stButton > button {
-    background-color:#0F8BC6 !important;
-    color:white !important;
-    border-radius:8px;
+/* AGENT CARD */
+.agent-card {
+    background: white;
+    padding: 14px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+    margin-bottom: 10px;
 }
 
 /* PROGRESS */
@@ -77,20 +48,22 @@ section[data-testid="stSidebar"] * {
     background-color:#0F8BC6;
 }
 
-/* LIGNES COMPACTES */
-.row {
-    padding:6px 0;
-    border-bottom:1px solid #E2E8F0;
+/* TAG */
+[data-baseweb="tag"] {
+    background-color:#E0F2FE !important;
+    color:#0369A1 !important;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- HEADER ----------------
-st.markdown('<div class="header">HelloWatt</div>', unsafe_allow_html=True)
-st.markdown('<div class="subheader">Dashboard de performance commerciale</div>', unsafe_allow_html=True)
-
-st.markdown("")
+st.markdown("""
+<div class="hero">
+    <h2 style="color:#0F8BC6;margin:0;">HelloWatt</h2>
+    <span style="color:#64748B;">Dashboard de performance commerciale</span>
+</div>
+""", unsafe_allow_html=True)
 
 # ---------------- AUTH ----------------
 password = st.sidebar.text_input("🔐 Admin", type="password")
@@ -100,7 +73,6 @@ uploaded_file = None
 
 if is_admin:
     uploaded_file = st.sidebar.file_uploader("Uploader fichier Excel", type=["xlsx"])
-
     if uploaded_file:
         with open(SAVE_PATH, "wb") as f:
             f.write(uploaded_file.getbuffer())
@@ -120,6 +92,33 @@ page = st.sidebar.radio("Navigation", [
     "🎯 Objectifs"
 ])
 
+# ---------------- UTILS ----------------
+def clean_text(col):
+    return (
+        col.astype(str)
+        .str.strip()
+        .str.replace('"', '', regex=False)
+        .str.replace("'", "", regex=False)
+        .str.replace("\xa0", "", regex=False)
+        .str.upper()
+    )
+
+def emoji(p):
+    return "🟢" if p >= 1 else "🟠" if p >= 0.7 else "🔴"
+
+def round_excel(x):
+    return int(x + 0.5 + 1e-9)
+
+def get_working_days():
+    today = datetime.today()
+    start = today.replace(day=1)
+    fr_holidays = holidays.FR()
+
+    days = pd.date_range(start, today)
+    working_days = [d for d in days if d.weekday() < 5 and d.date() not in fr_holidays]
+
+    return len(working_days)
+
 # ---------------- APP ----------------
 if uploaded_file:
 
@@ -128,16 +127,6 @@ if uploaded_file:
     df = pd.read_excel(xls, "Extraction")
     code = pd.read_excel(xls, "Code")
     objectifs = pd.read_excel(xls, "Objectifs")
-
-    def clean_text(col):
-        return (
-            col.astype(str)
-            .str.strip()
-            .str.replace('"', '', regex=False)
-            .str.replace("'", "", regex=False)
-            .str.replace("\xa0", "", regex=False)
-            .str.upper()
-        )
 
     df["responder"] = clean_text(df["responder"])
     code.iloc[:, 0] = clean_text(code.iloc[:, 0])
@@ -155,12 +144,16 @@ if uploaded_file:
 
     objectifs["Fournisseur"] = clean_text(objectifs["Fournisseur"])
 
-    # -------- FILTRES --------
+    # ---------------- FILTRES ----------------
     st.sidebar.markdown("### 🔎 Filtres")
 
     agents = st.sidebar.multiselect("Agents", df["agent"].unique(), default=df["agent"].unique())
     fournisseurs = st.sidebar.multiselect("Fournisseurs", df["get_provider"].unique(), default=df["get_provider"].unique())
     energie = st.sidebar.multiselect("Énergie", df["energie"].unique(), default=df["energie"].unique())
+
+    min_date = df["date"].min()
+    max_date = df["date"].max()
+    date_range = st.sidebar.date_input("Période", [min_date, max_date])
 
     df_filtered = df[
         (df["agent"].isin(agents)) &
@@ -168,15 +161,15 @@ if uploaded_file:
         (df["energie"].isin(energie))
     ]
 
+    if len(date_range) == 2:
+        df_filtered = df_filtered[
+            (df_filtered["date"] >= pd.to_datetime(date_range[0])) &
+            (df_filtered["date"] <= pd.to_datetime(date_range[1]))
+        ]
+
     objectif_total = objectifs["Objectifs Total"].sum()
     objectif_elec_total = objectifs["Objectif Elec"].sum()
     objectif_gaz_total = objectifs["Objectif Gaz"].sum()
-
-    def emoji(p):
-        return "🟢" if p >= 1 else "🟠" if p >= 0.7 else "🔴"
-
-    def round_excel(x):
-        return int(x + 0.5 + 1e-9)
 
     # ---------------- DASHBOARD ----------------
     if page == "📊 Dashboard":
@@ -187,35 +180,11 @@ if uploaded_file:
         ventes_gaz = len(df_filtered[df_filtered["energie"].isin(["GAZ","GAS"])])
         ventes_total = ventes_elec + ventes_gaz
 
-        # KPI CARDS
         c1, c2, c3 = st.columns(3)
 
-        with c1:
-            st.markdown(f"""
-            <div class="card">
-                <div class="card-title">⚡ Elec</div>
-                <div class="card-value">{ventes_elec}/{objectif_elec_total}</div>
-                <div class="card-sub">{ventes_elec/objectif_elec_total:.0%}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with c2:
-            st.markdown(f"""
-            <div class="card">
-                <div class="card-title">🔥 Gaz</div>
-                <div class="card-value">{ventes_gaz}/{objectif_gaz_total}</div>
-                <div class="card-sub">{ventes_gaz/objectif_gaz_total:.0%}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with c3:
-            st.markdown(f"""
-            <div class="card">
-                <div class="card-title">🏆 Total</div>
-                <div class="card-value">{ventes_total}/{objectif_total}</div>
-                <div class="card-sub">{ventes_total/objectif_total:.0%}</div>
-            </div>
-            """, unsafe_allow_html=True)
+        c1.metric("⚡ Elec", f"{ventes_elec}/{objectif_elec_total}", f"{ventes_elec/objectif_elec_total:.0%}")
+        c2.metric("🔥 Gaz", f"{ventes_gaz}/{objectif_gaz_total}", f"{ventes_gaz/objectif_gaz_total:.0%}")
+        c3.metric("🏆 Total", f"{ventes_total}/{objectif_total}", f"{ventes_total/objectif_total:.0%}")
 
         st.markdown("")
 
@@ -248,17 +217,21 @@ if uploaded_file:
 
         ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
         objectif_agent = math.ceil(185 * 0.75)
+        jours_travailles = get_working_days()
 
         ventes_agent["taux"] = ventes_agent["ventes"] / objectif_agent
+        ventes_agent["kpi_jour"] = ventes_agent["ventes"] / jours_travailles if jours_travailles else 0
+
         ventes_agent = ventes_agent.sort_values("taux", ascending=False)
 
         for _, r in ventes_agent.iterrows():
 
-            col1, col2, col3 = st.columns([3,6,2])
+            col1, col2, col3, col4 = st.columns([3,5,2,2])
 
             col1.markdown(f"**{r['agent']}**")
             col2.progress(min(r["taux"],1.0))
             col3.markdown(f"{emoji(r['taux'])} {r['ventes']}/{objectif_agent} ({r['taux']:.0%})")
+            col4.markdown(f"📅 {r['ventes']}/{jours_travailles}")
 
     # ---------------- OBJECTIFS ----------------
     elif page == "🎯 Objectifs":
@@ -274,13 +247,15 @@ if uploaded_file:
         ventes_total_agent = len(df_agent)
         taux_agent = ventes_total_agent / objectif_agent if objectif_agent else 0
 
-        col1, col2, col3 = st.columns([3,6,2])
+        # CARD AGENT
+        st.markdown('<div class="agent-card">', unsafe_allow_html=True)
 
+        col1, col2, col3 = st.columns([3,6,2])
         col1.markdown(f"**{agent}**")
         col2.progress(min(taux_agent,1.0))
         col3.markdown(f"{emoji(taux_agent)} {ventes_total_agent}/{objectif_agent} ({taux_agent:.0%})")
 
-        st.markdown("")
+        st.markdown('</div>', unsafe_allow_html=True)
 
         for fournisseur in objectifs["Fournisseur"].dropna().unique():
 
