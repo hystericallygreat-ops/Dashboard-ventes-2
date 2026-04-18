@@ -27,14 +27,12 @@ section[data-testid="stSidebar"] * {
     color:#0F172A !important;
 }
 
-/* Tags doux */
 [data-baseweb="tag"] {
     background-color:#E0F2FE !important;
     color:#0369A1 !important;
     border-radius:8px;
 }
 
-/* Boutons */
 .stButton > button {
     background-color:#0F8BC6;
     color:white;
@@ -164,17 +162,18 @@ if uploaded_file:
             fournisseur = r["Fournisseur"]
             ventes = int(r["ventes"])
             obj = int(r["Objectifs Total"])
-
             p = ventes / obj if obj else 0
 
-            col1, col2 = st.columns([4,6])
+            col1, col2, col3 = st.columns([3,6,2])
 
             with col1:
                 st.markdown(f"**{fournisseur}**")
-                st.caption(f"{emoji(p)} {ventes}/{obj} ({p:.0%})")
 
             with col2:
                 st.progress(min(p,1.0))
+
+            with col3:
+                st.markdown(f"{emoji(p)} {ventes}/{obj} ({p:.0%})")
 
     # ---------------- AGENTS ----------------
     elif page == "👤 Agents":
@@ -200,10 +199,10 @@ if uploaded_file:
                 st.markdown(f"**{agent}**")
 
             with col2:
-                st.progress(min(taux, 1.0))
+                st.progress(min(taux,1.0))
 
             with col3:
-                st.markdown(f"{emoji(taux)} {ventes}/{objectif_agent}  \n**{taux:.0%}**")
+                st.markdown(f"{emoji(taux)} {ventes}/{objectif_agent} ({taux:.0%})")
 
     # ---------------- OBJECTIFS ----------------
     elif page == "🎯 Objectifs":
