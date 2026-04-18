@@ -7,31 +7,90 @@ st.set_page_config(page_title="HelloWatt Dashboard", layout="wide")
 
 SAVE_PATH = "last_uploaded.xlsx"
 
-# ---------------- STYLE ----------------
+# ---------------- STYLE PREMIUM ----------------
 st.markdown("""
 <style>
-html, body {background-color: #F5FAFD;}
 
-.header {font-size:28px;font-weight:700;color:#0F8BC6;}
-.subheader {color:#64748B;font-size:14px;}
+/* GLOBAL */
+.block-container {
+    max-width: 1100px;
+    padding-top: 1rem;
+}
 
+/* HEADER */
+.header {
+    font-size:32px;
+    font-weight:700;
+    color:#0F8BC6;
+    margin-bottom:0;
+}
+.subheader {
+    color:#64748B;
+    font-size:14px;
+    margin-top:-5px;
+}
+
+/* KPI CARDS */
+.card {
+    background: white;
+    padding:16px;
+    border-radius:12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    text-align:center;
+}
+.card-title {
+    font-size:13px;
+    color:#64748B;
+}
+.card-value {
+    font-size:22px;
+    font-weight:700;
+}
+.card-sub {
+    font-size:13px;
+    color:#0F8BC6;
+}
+
+/* SIDEBAR */
+section[data-testid="stSidebar"] {
+    background-color:#EDF7FA;
+}
+section[data-testid="stSidebar"] * {
+    color:#0F172A !important;
+}
+
+/* TAGS */
+[data-baseweb="tag"] {
+    background-color:#E0F2FE !important;
+    color:#0369A1 !important;
+}
+
+/* BUTTON */
+.stButton > button {
+    background-color:#0F8BC6 !important;
+    color:white !important;
+    border-radius:8px;
+}
+
+/* PROGRESS */
 .stProgress > div > div > div > div {
     background-color:#0F8BC6;
 }
 
-section[data-testid="stSidebar"] {
-    background-color:#EDF7FA;
+/* LIGNES COMPACTES */
+.row {
+    padding:6px 0;
+    border-bottom:1px solid #E2E8F0;
 }
 
-section[data-testid="stSidebar"] * {
-    color:#0F172A !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------- HEADER ----------------
 st.markdown('<div class="header">HelloWatt</div>', unsafe_allow_html=True)
 st.markdown('<div class="subheader">Dashboard de performance commerciale</div>', unsafe_allow_html=True)
-st.markdown("---")
+
+st.markdown("")
 
 # ---------------- AUTH ----------------
 password = st.sidebar.text_input("🔐 Admin", type="password")
@@ -103,21 +162,11 @@ if uploaded_file:
     fournisseurs = st.sidebar.multiselect("Fournisseurs", df["get_provider"].unique(), default=df["get_provider"].unique())
     energie = st.sidebar.multiselect("Énergie", df["energie"].unique(), default=df["energie"].unique())
 
-    min_date = df["date"].min()
-    max_date = df["date"].max()
-    date_range = st.sidebar.date_input("Période", [min_date, max_date])
-
     df_filtered = df[
         (df["agent"].isin(agents)) &
         (df["get_provider"].isin(fournisseurs)) &
         (df["energie"].isin(energie))
     ]
-
-    if len(date_range) == 2:
-        df_filtered = df_filtered[
-            (df_filtered["date"] >= pd.to_datetime(date_range[0])) &
-            (df_filtered["date"] <= pd.to_datetime(date_range[1]))
-        ]
 
     objectif_total = objectifs["Objectifs Total"].sum()
     objectif_elec_total = objectifs["Objectif Elec"].sum()
@@ -138,14 +187,37 @@ if uploaded_file:
         ventes_gaz = len(df_filtered[df_filtered["energie"].isin(["GAZ","GAS"])])
         ventes_total = ventes_elec + ventes_gaz
 
-        # KPI
+        # KPI CARDS
         c1, c2, c3 = st.columns(3)
 
-        c1.metric("⚡ Elec", f"{ventes_elec}/{objectif_elec_total}", f"{ventes_elec/objectif_elec_total:.0%}")
-        c2.metric("🔥 Gaz", f"{ventes_gaz}/{objectif_gaz_total}", f"{ventes_gaz/objectif_gaz_total:.0%}")
-        c3.metric("🏆 Total", f"{ventes_total}/{objectif_total}", f"{ventes_total/objectif_total:.0%}")
+        with c1:
+            st.markdown(f"""
+            <div class="card">
+                <div class="card-title">⚡ Elec</div>
+                <div class="card-value">{ventes_elec}/{objectif_elec_total}</div>
+                <div class="card-sub">{ventes_elec/objectif_elec_total:.0%}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        st.markdown("---")
+        with c2:
+            st.markdown(f"""
+            <div class="card">
+                <div class="card-title">🔥 Gaz</div>
+                <div class="card-value">{ventes_gaz}/{objectif_gaz_total}</div>
+                <div class="card-sub">{ventes_gaz/objectif_gaz_total:.0%}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with c3:
+            st.markdown(f"""
+            <div class="card">
+                <div class="card-title">🏆 Total</div>
+                <div class="card-value">{ventes_total}/{objectif_total}</div>
+                <div class="card-sub">{ventes_total/objectif_total:.0%}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("")
 
         ventes_fournisseur = df_filtered.groupby("get_provider").size().reset_index(name="ventes")
 
@@ -200,16 +272,15 @@ if uploaded_file:
 
         objectif_agent = round_excel(heures * 0.75)
         ventes_total_agent = len(df_agent)
-
         taux_agent = ventes_total_agent / objectif_agent if objectif_agent else 0
 
-        # 🔥 BARRE GLOBALE AGENT
         col1, col2, col3 = st.columns([3,6,2])
+
         col1.markdown(f"**{agent}**")
         col2.progress(min(taux_agent,1.0))
         col3.markdown(f"{emoji(taux_agent)} {ventes_total_agent}/{objectif_agent} ({taux_agent:.0%})")
 
-        st.markdown("---")
+        st.markdown("")
 
         for fournisseur in objectifs["Fournisseur"].dropna().unique():
 
