@@ -14,7 +14,7 @@ st.markdown("""
 <style>
 
 .block-container {
-    max-width: 100% !important;
+    max-width: 100%;
     padding-top: 3rem;
 }
 
@@ -27,41 +27,29 @@ st.markdown("""
 }
 
 /* CARD */
-.card {
+.row-card {
     background: white;
-    padding: 14px;
+    padding: 10px 14px;
     border-radius: 10px;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    margin-bottom: 6px;
 }
 
-/* AGENT CARD (PLUS VISIBLE) */
+/* AGENT CARD (plus visible) */
 .agent-card {
-    background: white;
-    padding: 16px;
-    border-radius: 12px;
     border: 2px solid #0F8BC6;
-    box-shadow: 0 6px 16px rgba(15,139,198,0.2);
-    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(15,139,198,0.2);
 }
 
-/* SPECIAL KPI CARD */
+/* SPECIAL CARD */
 .special-card {
     background: #F0F9FF;
-    padding: 14px;
-    border-radius: 10px;
     border: 2px solid #0F8BC6;
-    margin-bottom: 10px;
 }
 
 /* PROGRESS */
 .stProgress > div > div > div > div {
     background-color:#0F8BC6;
-}
-
-/* TAG */
-[data-baseweb="tag"] {
-    background-color:#E0F2FE !important;
-    color:#0369A1 !important;
 }
 
 </style>
@@ -158,16 +146,12 @@ if uploaded_file:
 
     USER_COL = "user id"
 
-    # ---------------- FILTRES ----------------
+    # FILTRES
     st.sidebar.markdown("### 🔎 Filtres")
 
     agents = st.sidebar.multiselect("Agents", df["agent"].unique(), default=df["agent"].unique())
     fournisseurs = st.sidebar.multiselect("Fournisseurs", df["get_provider"].unique(), default=df["get_provider"].unique())
     energie = st.sidebar.multiselect("Énergie", df["energie"].unique(), default=df["energie"].unique())
-
-    min_date = df["date"].min()
-    max_date = df["date"].max()
-    date_range = st.sidebar.date_input("Période", [min_date, max_date])
 
     df_filtered = df[
         (df["agent"].isin(agents)) &
@@ -175,16 +159,59 @@ if uploaded_file:
         (df["energie"].isin(energie))
     ]
 
-    if len(date_range) == 2:
-        df_filtered = df_filtered[
-            (df_filtered["date"] >= pd.to_datetime(date_range[0])) &
-            (df_filtered["date"] <= pd.to_datetime(date_range[1]))
-        ]
-
     objectif_total = objectifs["Objectifs Total"].sum()
 
+    # ---------------- DASHBOARD ----------------
+    if page == "📊 Dashboard":
+
+        st.title("🏢 Objectifs Globaux")
+
+        ventes = df_filtered.groupby("get_provider").size().reset_index(name="ventes")
+
+        df_obj = objectifs.merge(
+            ventes,
+            left_on="Fournisseur",
+            right_on="get_provider",
+            how="left"
+        ).fillna(0)
+
+        df_obj = df_obj.sort_values("Objectifs Total", ascending=False)
+
+        for _, r in df_obj.iterrows():
+
+            p = r["ventes"] / r["Objectifs Total"] if r["Objectifs Total"] else 0
+
+            col1, col2, col3 = st.columns([3,6,2])
+            col1.markdown(f"**{r['Fournisseur']}**")
+            col2.progress(min(p,1.0))
+            col3.markdown(f"{emoji(p)} {int(r['ventes'])}/{int(r['Objectifs Total'])} ({p:.0%})")
+
+    # ---------------- AGENTS ----------------
+    elif page == "👤 Agents":
+
+        st.title("👤 Performance Agents")
+
+        jours = get_working_days()
+        ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
+
+        objectif_agent = math.ceil(185 * 0.75)
+
+        ventes_agent["taux"] = ventes_agent["ventes"] / objectif_agent
+        ventes_agent["kpi"] = ventes_agent["ventes"] / jours if jours else 0
+
+        ventes_agent = ventes_agent.sort_values("taux", ascending=False)
+
+        for _, r in ventes_agent.iterrows():
+
+            col1, col2, col3, col4 = st.columns([3,5,2,2])
+
+            col1.markdown(f"**{r['agent']}**")
+            col2.progress(min(r["taux"],1.0))
+            col3.markdown(f"{emoji(r['taux'])} {r['ventes']}/{objectif_agent} ({r['taux']:.0%})")
+            col4.markdown(f"📅 {round(r['kpi'],1)}/J")
+
     # ---------------- OBJECTIFS ----------------
-    if page == "🎯 Objectifs":
+    elif page == "🎯 Objectifs":
 
         st.title("🎯 Performance détaillée")
 
@@ -193,54 +220,45 @@ if uploaded_file:
 
         df_agent = df_filtered[df_filtered["agent"] == agent]
 
-        # -------- KPI GLOBAL AGENT --------
         objectif_agent = round_excel(heures * 0.75)
-        ventes_total_agent = len(df_agent)
-        taux_agent = ventes_total_agent / objectif_agent if objectif_agent else 0
+        ventes_agent = len(df_agent)
+        taux_agent = ventes_agent / objectif_agent if objectif_agent else 0
 
-        st.markdown('<div class="agent-card">', unsafe_allow_html=True)
-
+        # GLOBAL AGENT
         col1, col2, col3 = st.columns([3,6,2])
         col1.markdown(f"**{agent}**")
         col2.progress(min(taux_agent,1.0))
-        col3.markdown(f"{emoji(taux_agent)} {ventes_total_agent}/{objectif_agent} ({taux_agent:.0%})")
+        col3.markdown(f"{emoji(taux_agent)} {ventes_agent}/{objectif_agent} ({taux_agent:.0%})")
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        # FOURNISSEURS CLASSIQUES
+        special = ["HOMESERVE", "FREE"]
 
-        # -------- FOURNISSEURS CLASSIQUES (SANS HOMESERVE / FREE) --------
-        special_providers = ["HOMESERVE", "FREE"]
+        for f in objectifs["Fournisseur"].dropna().unique():
 
-        for fournisseur in objectifs["Fournisseur"].dropna().unique():
-
-            if fournisseur in special_providers:
+            if f in special:
                 continue
 
-            df_f = df_agent[df_agent["get_provider"] == fournisseur]
-            obj_row = objectifs[objectifs["Fournisseur"] == fournisseur]
+            df_f = df_agent[df_agent["get_provider"] == f]
+            obj_row = objectifs[objectifs["Fournisseur"] == f]
 
             ventes = len(df_f)
-
-            obj = round_excel(
-                heures * 0.75 *
-                (obj_row["Objectifs Total"].sum() / objectif_total)
-            )
+            obj = round_excel(heures * 0.75 * (obj_row["Objectifs Total"].sum() / objectif_total))
 
             p = ventes / obj if obj else 0
 
             col1, col2, col3 = st.columns([3,6,2])
-
-            col1.markdown(f"**{fournisseur}**")
+            col1.markdown(f"**{f}**")
             col2.progress(min(p,1.0))
             col3.markdown(f"{emoji(p)} {ventes}/{obj} ({p:.0%})")
 
-        # -------- FOURNISSEURS SPÉCIAUX --------
+        # FOURNISSEURS SPÉCIAUX
         st.markdown("### ⭐ Fournisseurs spécifiques")
 
         total_unique = df_agent[USER_COL].nunique()
 
         cols = st.columns(2)
 
-        for i, sp in enumerate(special_providers):
+        for i, sp in enumerate(special):
 
             df_sp = df_agent[df_agent["get_provider"] == sp]
             ventes_sp = df_sp[USER_COL].nunique()
@@ -249,13 +267,9 @@ if uploaded_file:
             p_sp = ventes_sp / obj_sp if obj_sp else 0
 
             with cols[i]:
-                st.markdown('<div class="special-card">', unsafe_allow_html=True)
-
                 st.markdown(f"**{sp}**")
                 st.progress(min(p_sp,1.0))
                 st.markdown(f"{emoji(p_sp)} {ventes_sp}/{obj_sp} ({p_sp:.0%})")
-
-                st.markdown('</div>', unsafe_allow_html=True)
 
 else:
     st.info("🔒 Ajoute un fichier (admin uniquement)")
