@@ -15,11 +15,6 @@ section[data-testid="stSidebar"] {
     background-color: #E2E8F0;
 }
 
-[data-baseweb="tag"] {
-    background-color: #BFDBFE !important;
-    color: #1E3A8A !important;
-}
-
 .stProgress > div > div > div > div {
     background-color:#0F8BC6;
 }
@@ -30,11 +25,6 @@ section[data-testid="stSidebar"] {
     background-color: #F8FAFC;
     border: 1px solid #CBD5E1;
     margin-bottom: 10px;
-}
-
-h1, h2, h3 {
-    margin-top: 8px !important;
-    margin-bottom: 8px !important;
 }
 
 </style>
@@ -51,7 +41,7 @@ uploaded_file = None
 
 # ---------------- UTILS ----------------
 def clean_text(col):
-    return col.astype(str).str.strip().str.replace('"','').str.replace("'","").str.upper()
+    return col.astype(str).str.strip().str.upper()
 
 def emoji(p):
     return "🟢" if p>=1 else "🟠" if p>=0.7 else "🔴"
@@ -77,6 +67,14 @@ if uploaded_file:
     code = pd.read_excel(xls,"Code")
     objectifs = pd.read_excel(xls,"Objectifs")
 
+    # ---------------- NORMALISATION ----------------
+    objectifs.columns = (
+        objectifs.columns
+        .str.strip()
+        .str.upper()
+        .str.replace(" ", "_")
+    )
+
     df["responder"] = clean_text(df["responder"])
     code.iloc[:,0] = clean_text(code.iloc[:,0])
 
@@ -89,8 +87,6 @@ if uploaded_file:
     df["get_provider"] = clean_text(df["get_provider"])
     df["energie"] = clean_text(df["energie"])
     df["date"] = pd.to_datetime(df["date"],errors="coerce")
-
-    objectifs["Fournisseur"] = clean_text(objectifs["Fournisseur"])
 
     USER_COL = "user id"
 
@@ -124,28 +120,26 @@ if uploaded_file:
         ventes = df_filtered.groupby("get_provider").size().reset_index(name="ventes")
 
         df_obj = objectifs.merge(
-            ventes,left_on="Fournisseur",right_on="get_provider",how="left"
+            ventes,left_on="FOURNISSEUR",right_on="get_provider",how="left"
         ).fillna(0)
-
-        df_obj = df_obj.sort_values("Objectifs Total",ascending=False)
 
         for _,r in df_obj.iterrows():
 
-            df_f = df_filtered[df_filtered["get_provider"]==r["Fournisseur"]]
+            df_f = df_filtered[df_filtered["get_provider"]==r["FOURNISSEUR"]]
 
             elec = len(df_f[df_f["energie"]=="ELEC"])
             gaz = len(df_f[df_f["energie"]=="GAZ"])
             total = elec + gaz
 
-            obj_total = r["Objectifs Total"]
-            obj_elec = r["Objectifs ELEC"]
-            obj_gaz = r["Objectifs GAZ"]
+            obj_total = r["OBJECTIFS_TOTAL"]
+            obj_elec = r["OBJECTIF_ELEC"]
+            obj_gaz = r["OBJECTIF_GAZ"]
 
             p = total / obj_total if obj_total else 0
 
             c1,c2,c3 = st.columns([3,5,6])
 
-            c1.write(r["Fournisseur"])
+            c1.write(r["FOURNISSEUR"])
             c2.progress(min(p,1.0))
 
             c3.write(
@@ -187,14 +181,9 @@ if uploaded_file:
         heures = colA.number_input("Heures", value=185.0)
         agent = colB.selectbox("Agent", df_filtered["agent"].unique())
 
-        st.markdown("<br>", unsafe_allow_html=True)
-
         df_agent = df_filtered[df_filtered["agent"]==agent]
 
         obj_total = round_excel(heures*0.75)
-
-        obj_elec = objectifs["Objectifs ELEC"].sum()
-        obj_gaz = objectifs["Objectifs GAZ"].sum()
 
         elec = len(df_agent[df_agent["energie"]=="ELEC"])
         gaz = len(df_agent[df_agent["energie"]=="GAZ"])
@@ -211,8 +200,8 @@ if uploaded_file:
 
         c3.write(
             f"{emoji(taux)} "
-            f"⚡ {elec}/{obj_elec} "
-            f"🔥 {gaz}/{obj_gaz} "
+            f"⚡ {elec} "
+            f"🔥 {gaz} "
             f"🎯 {total}/{obj_total} ({taux:.0%})"
         )
 
