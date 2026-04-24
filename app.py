@@ -15,45 +15,30 @@ section[data-testid="stSidebar"] {
     background-color: #E2E8F0;
 }
 
-[data-baseweb="tag"] {
-    background-color: #BFDBFE !important;
-    color: #1E3A8A !important;
-}
-
-/* KPI CARD ULTRA CLEAN */
 .kpi-card {
     background-color: #F8FAFC;
     border: 1px solid #CBD5E1;
     border-radius: 14px;
-    height: 120px;
+    height: 110px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    text-align: center;
-    padding: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    padding: 8px;
 }
 
 .kpi-card h4 {
     margin: 0;
-    font-size: 14px;
-    color: #334155;
+    font-size: 13px;
 }
 
 .kpi-card h2 {
-    margin: 5px 0 0 0;
+    margin: 2px 0 0 0;   /* 🔥 FIX ESPACE ICI */
     font-size: 22px;
 }
 
-/* PROGRESS */
 .stProgress > div > div > div > div {
     background-color:#0F8BC6;
-}
-
-h1, h2, h3 {
-    margin-top: 10px !important;
-    margin-bottom: 10px !important;
 }
 
 </style>
@@ -65,7 +50,7 @@ st.title("HelloWatt - Dashboard")
 
 page = st.sidebar.radio("Navigation", ["📊 Dashboard","👤 Agents","🎯 Objectifs"])
 
-# ---------------- UTILS ----------------
+# ---------------- UTILS (RESTAURÉS PROPRES) ----------------
 def clean_text(col):
     return col.astype(str).str.strip().str.upper()
 
@@ -104,7 +89,7 @@ if uploaded_file:
     df["agent"] = clean_text(df["agent"]).fillna("INCONNU")
     df["get_provider"] = clean_text(df["get_provider"])
 
-    # ---------------- FIX ÉNERGIE (IMPORTANT) ----------------
+    # ---------------- FIX GAZ (ON GARDE) ----------------
     df["energie"] = (
         df["energie"]
         .astype(str)
@@ -159,7 +144,7 @@ if uploaded_file:
 
         total_ventes = df_filtered.shape[0]
 
-        # ---------------- KPI CENTRÉS ----------------
+        # ---------------- KPI FIX ESPACE ----------------
         total_elec = df_filtered[df_filtered["energie"]=="ELEC"].shape[0]
         total_gaz = df_filtered[df_filtered["energie"]=="GAZ"].shape[0]
 
@@ -189,7 +174,7 @@ if uploaded_file:
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # ---------------- FOURNISSEURS ----------------
+        # ================= FOURNISSEURS =================
         st.subheader("🏭 Performance par fournisseur")
 
         for f in objectifs["Fournisseur"].dropna().unique():
@@ -225,6 +210,51 @@ if uploaded_file:
                 """, unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
+
+    # ================= AGENTS (RESTAURÉ ORIGINAL) =================
+    elif page=="👤 Agents":
+
+        st.header("👤 Performance Agents")
+
+        jours = get_working_days()
+        obj_agent = math.ceil(185*0.75)
+
+        ventes_agent = df.groupby("agent").size().reset_index(name="ventes")
+        ventes_agent["taux"] = ventes_agent["ventes"]/obj_agent
+        ventes_agent["kpi"] = ventes_agent["ventes"]/jours if jours else 0
+
+        ventes_agent = ventes_agent.sort_values("taux",ascending=False)
+
+        for _,r in ventes_agent.iterrows():
+
+            c1,c2,c3,c4 = st.columns([3,5,2,2])
+            c1.write(r["agent"])
+            c2.progress(min(r["taux"],1.0))
+            c3.write(f"{emoji(r['taux'])} {r['ventes']}/{obj_agent} ({r['taux']:.0%})")
+            c4.write(f"📅 {round(r['kpi'],1)}/J")
+
+    # ================= OBJECTIFS (RESTAURÉ ORIGINAL) =================
+    elif page=="🎯 Objectifs":
+
+        st.header("🎯 Performance détaillée")
+
+        with st.container():
+            st.markdown("### 👤 Agent")
+
+            colA, colB = st.columns(2)
+            heures = colA.number_input("Heures", value=185.0)
+            agent = colB.selectbox("Agent", df["agent"].unique())
+
+            df_agent = df[df["agent"]==agent]
+
+            obj_agent = round_excel(heures*0.75)
+            ventes_total = len(df_agent)
+            taux = ventes_total/obj_agent if obj_agent else 0
+
+            c1,c2,c3 = st.columns([3,6,2])
+            c1.write(agent)
+            c2.progress(min(taux,1.0))
+            c3.write(f"{emoji(taux)} {ventes_total}/{obj_agent} ({taux:.0%})")
 
 else:
     st.info("🔒 Ajoute un fichier (admin)")
