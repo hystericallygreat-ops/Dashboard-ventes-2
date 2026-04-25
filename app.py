@@ -190,30 +190,62 @@ if uploaded_file:
                     unsafe_allow_html=True
                 )
 
-    # ================= AGENTS =================
-    elif page=="👤 Agents":
+# ================= AGENTS =================
+elif page=="👤 Agents":
 
-        st.header("👤 Performance Agents")
-        st.markdown("<br>", unsafe_allow_html=True)
+    st.header("👤 Performance Agents")
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        jours = get_working_days()
-        obj_agent = math.ceil(185*0.75)
+    jours = get_working_days()
+    obj_agent = math.ceil(185*0.75)
 
-        ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
+    ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
 
-        ventes_agent["taux"]=ventes_agent["ventes"]/obj_agent
-        ventes_agent["kpi"]=ventes_agent["ventes"]/jours if jours else 0
+    ventes_agent["taux"]=ventes_agent["ventes"]/obj_agent
+    ventes_agent["kpi"]=ventes_agent["ventes"]/jours if jours else 0
 
-        ventes_agent = ventes_agent.sort_values("taux",ascending=False)
+    ventes_agent = ventes_agent.sort_values("taux",ascending=False)
 
-        for _,r in ventes_agent.iterrows():
+    # 🔹 Répartition globale Elec / Gaz (SAFE)
+    total_obj_global = objectifs["Objectifs Total"].sum()
+    total_obj_elec = objectifs["Objectif Elec"].sum()
+    total_obj_gaz = objectifs["Objectif Gaz"].sum()
 
-            c1,c2,c3,c4 = st.columns([3,5,2,2])
-            c1.write(r["agent"])
-            c2.progress(min(r["taux"],1.0))
-            c3.write(f"{emoji(r['taux'])} {r['ventes']}/{obj_agent}")
-            c4.write(f"📅 {round(r['kpi'],1)}/J")
+    ratio_elec = total_obj_elec / total_obj_global if total_obj_global else 0
+    ratio_gaz = total_obj_gaz / total_obj_global if total_obj_global else 0
 
+    for _,r in ventes_agent.iterrows():
+
+        agent_name = r["agent"]
+        df_agent = df_filtered[df_filtered["agent"] == agent_name]
+
+        # 🔹 Ventes réelles
+        v_elec = len(df_agent[df_agent["energie"]=="ELEC"])
+        v_gaz = len(df_agent[df_agent["energie"]=="GAZ"])
+        v_total = v_elec + v_gaz
+
+        # 🔹 Objectifs répartis
+        obj_elec = round(obj_agent * ratio_elec)
+        obj_gaz = round(obj_agent * ratio_gaz)
+        obj_total = obj_elec + obj_gaz
+
+        # 🔹 Taux
+        p = v_total / obj_total if obj_total else 0
+
+        c1,c2,c3,c4 = st.columns([3,5,4,2])
+
+        c1.write(agent_name)
+        c2.progress(min(p,1.0))
+
+        c3.markdown(
+            f"⚡ {v_elec}/{obj_elec} &nbsp;&nbsp; "
+            f"🔥 {v_gaz}/{obj_gaz} &nbsp;&nbsp; "
+            f"🎯 {v_total}/{obj_total} &nbsp;&nbsp; "
+            f"{emoji(p)} {p:.0%}",
+            unsafe_allow_html=True
+        )
+
+        c4.write(f"📅 {round(r['kpi'],1)}/J")
     # ================= OBJECTIFS =================
     elif page=="🎯 Objectifs":
 
