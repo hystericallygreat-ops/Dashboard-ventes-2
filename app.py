@@ -121,6 +121,23 @@ if uploaded_file:
     min_d,max_d=df["date"].min(),df["date"].max()
     dates = st.sidebar.date_input("Période",[min_d,max_d])
 
+    # ---------------- ADMIN (REMIS EN BAS) ----------------
+    st.sidebar.markdown("---")
+    password = st.sidebar.text_input("🔐 Admin", type="password")
+    is_admin = password == "hello123"
+
+    if is_admin:
+        uploaded_file_admin = st.sidebar.file_uploader("Uploader fichier Excel", type=["xlsx"])
+        if uploaded_file_admin:
+            with open(SAVE_PATH, "wb") as f:
+                f.write(uploaded_file_admin.getbuffer())
+
+        if os.path.exists(SAVE_PATH):
+            if st.sidebar.button("🗑 Supprimer"):
+                os.remove(SAVE_PATH)
+                st.rerun()
+
+    # ---------------- FILTRAGE ----------------
     df_filtered = df[
         df["agent"].isin(agents) &
         df["get_provider"].isin(fournisseurs) &
@@ -135,7 +152,7 @@ if uploaded_file:
 
     objectif_total = objectifs["Objectifs Total"].sum()
 
-    # ================= DASHBOARD (INCHANGÉ) =================
+    # ================= DASHBOARD =================
     if page=="📊 Dashboard":
 
         st.header("🏢 Objectifs Globaux")
@@ -173,7 +190,7 @@ if uploaded_file:
                     unsafe_allow_html=True
                 )
 
-    # ================= AGENTS (FIX UNIQUEMENT) =================
+    # ================= AGENTS =================
     elif page=="👤 Agents":
 
         st.header("👤 Performance Agents")
@@ -212,7 +229,6 @@ if uploaded_file:
         ventes_total = len(df_agent)
         taux = ventes_total/obj_agent if obj_agent else 0
 
-        # ✅ CARTE
         st.markdown("<div class='block'>", unsafe_allow_html=True)
         st.subheader(agent)
         st.progress(min(taux,1.0))
@@ -245,9 +261,7 @@ if uploaded_file:
 
             v_total = len(df_f)
             v_elec = len(df_f[df_f["energie"]=="ELEC"])
-            v_gaz = len(df_f[df_f["energie"]=="GAZ"]
-
-)
+            v_gaz = len(df_f[df_f["energie"]=="GAZ"])
 
             p = v_total/obj_total_f if obj_total_f else 0
 
