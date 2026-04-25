@@ -7,7 +7,7 @@ import holidays
 
 st.set_page_config(page_title="HelloWatt Dashboard", layout="wide")
 
-# ---------------- CSS SAFE (INCHANGÉ) ----------------
+# ---------------- CSS SAFE ----------------
 st.markdown("""
 <style>
 
@@ -45,8 +45,6 @@ SAVE_PATH = "last_uploaded.xlsx"
 st.title("HelloWatt - Dashboard")
 
 page = st.sidebar.radio("Navigation", ["📊 Dashboard","👤 Agents","🎯 Objectifs"])
-
-uploaded_file = None
 
 # ---------------- UTILS ----------------
 def clean_text(col):
@@ -99,33 +97,13 @@ if uploaded_file:
     df["date"]=pd.to_datetime(df["date"],errors="coerce")
     objectifs["Fournisseur"]=clean_text(objectifs["Fournisseur"])
 
-    USER_COL="user id"
-
     # ---------------- FILTRES ----------------
-    st.sidebar.markdown("### 🔎 Filtres")
-
     agents = st.sidebar.multiselect("Agents", df["agent"].unique(), df["agent"].unique())
     fournisseurs = st.sidebar.multiselect("Fournisseurs", df["get_provider"].unique(), df["get_provider"].unique())
     energie = st.sidebar.multiselect("Énergie", df["energie"].unique(), df["energie"].unique())
 
     min_d,max_d=df["date"].min(),df["date"].max()
     dates = st.sidebar.date_input("Période",[min_d,max_d])
-
-    # ---------------- ADMIN ----------------
-    st.sidebar.markdown("---")
-    password = st.sidebar.text_input("🔐 Admin", type="password")
-    is_admin = password == "hello123"
-
-    if is_admin:
-        uploaded_file_admin = st.sidebar.file_uploader("Uploader fichier Excel", type=["xlsx"])
-        if uploaded_file_admin:
-            with open(SAVE_PATH, "wb") as f:
-                f.write(uploaded_file_admin.getbuffer())
-
-        if os.path.exists(SAVE_PATH):
-            if st.sidebar.button("🗑 Supprimer"):
-                os.remove(SAVE_PATH)
-                st.rerun()
 
     # ---------------- FILTRAGE SAFE ----------------
     df_filtered = df.copy()
@@ -147,40 +125,8 @@ if uploaded_file:
 
     objectif_total = objectifs["Objectifs Total"].sum()
 
-    # ================= DASHBOARD =================
-    if page=="📊 Dashboard":
-
-        st.header("🏢 Objectifs Globaux")
-
-        ventes = df_filtered.groupby("get_provider").size().reset_index(name="ventes")
-
-        df_obj = objectifs.merge(
-            ventes,left_on="Fournisseur",right_on="get_provider",how="left"
-        ).fillna(0)
-
-        for _,r in df_obj.iterrows():
-
-            p = r["ventes"]/r["Objectifs Total"] if r["Objectifs Total"] else 0
-
-            df_f = df_filtered[df_filtered["get_provider"]==r["Fournisseur"]]
-
-            v_elec = len(df_f[df_f["energie"]=="ELEC"])
-            v_gaz = len(df_f[df_f["energie"]=="GAZ"])
-
-            obj_elec = objectifs[objectifs["Fournisseur"]==r["Fournisseur"]]["Objectif Elec"].sum()
-            obj_gaz = objectifs[objectifs["Fournisseur"]==r["Fournisseur"]]["Objectif Gaz"].sum()
-
-            with st.container():
-                c1,c2,c3 = st.columns([3,6,4])
-                c1.write(r["Fournisseur"])
-                c2.progress(min(p,1.0))
-                c3.markdown(
-                    f"⚡ {v_elec}/{obj_elec} 🔥 {v_gaz}/{obj_gaz} 🎯 {int(r['ventes'])}/{int(r['Objectifs Total'])} {emoji(p)} {p:.0%}",
-                    unsafe_allow_html=True
-                )
-
     # ================= AGENTS =================
-    elif page=="👤 Agents":
+    if page=="👤 Agents":
 
         st.header("👤 Performance Agents")
 
@@ -209,7 +155,7 @@ if uploaded_file:
             v_elec = len(df_agent[df_agent["energie"]=="ELEC"])
             v_gaz = len(df_agent[df_agent["energie"]=="GAZ"])
 
-            # 🔥 TOTAL = TOUT
+            # TOTAL = TOUT
             v_total = len(df_agent)
 
             obj_elec = round(obj_agent * ratio_elec)
@@ -223,8 +169,22 @@ if uploaded_file:
             c1.write(agent_name)
             c2.progress(min(p,1.0))
 
+            # 🔥 TABLE ALIGNÉE (FIX FINAL)
             c3.markdown(
-                f"⚡ {v_elec}/{obj_elec} 🔥 {v_gaz}/{obj_gaz} 🎯 {v_total}/{obj_total} {emoji(p)} {p:.0%}",
+                f"""
+                <div style="
+                    display:grid;
+                    grid-template-columns:95px 95px 120px 70px;
+                    font-size:14px;
+                    white-space:nowrap;
+                    align-items:center;
+                ">
+                    <div>⚡ <b>{v_elec}</b>/<span>{obj_elec}</span></div>
+                    <div>🔥 <b>{v_gaz}</b>/<span>{obj_gaz}</span></div>
+                    <div>🎯 <b>{v_total}</b>/<span>{obj_total}</span></div>
+                    <div>{emoji(p)} <b>{p:.0%}</b></div>
+                </div>
+                """,
                 unsafe_allow_html=True
             )
 
@@ -237,7 +197,7 @@ if uploaded_file:
 
         colA,colB = st.columns(2)
         heures = colA.number_input("Heures", value=185.0)
-        agent = colB.selectbox("Agent", df_filtered["agent"].unique())
+        agent = colB.selectbox("Agent", df_filtered["agent"].dropna().unique())
 
         df_agent = df_filtered[df_filtered["agent"] == agent]
 
@@ -247,8 +207,11 @@ if uploaded_file:
 
         taux = ventes_total/obj_agent if obj_agent else 0
 
+        st.markdown("<div class='block'>", unsafe_allow_html=True)
+        st.subheader(agent)
         st.progress(min(taux,1.0))
         st.write(f"{emoji(taux)} {ventes_total}/{obj_agent} ({taux:.0%})")
+        st.markdown("</div>", unsafe_allow_html=True)
 
 else:
     st.info("🔒 Ajoute un fichier (admin)")
