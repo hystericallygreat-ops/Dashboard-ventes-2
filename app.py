@@ -181,28 +181,69 @@ if uploaded_file:
 
     # ================= AGENTS =================
     elif page=="👤 Agents":
-
+    
         st.header("👤 Performance Agents")
         st.markdown("<br>", unsafe_allow_html=True)
-
+    
+        # ---------------- BASE ----------------
         jours = get_working_days()
-        obj_agent = math.ceil(185*0.75)
-
+        obj_agent = math.ceil(185 * 0.75)
+    
+        # Total ventes par agent (inchangé)
         ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
-
-        ventes_agent["taux"]=ventes_agent["ventes"]/obj_agent
-        ventes_agent["kpi"]=ventes_agent["ventes"]/jours if jours else 0
-
-        ventes_agent = ventes_agent.sort_values("taux",ascending=False)
-
-        for _,r in ventes_agent.iterrows():
-
-            c1,c2,c3,c4 = st.columns([3,5,2,2])
+    
+        # ---------------- NOUVEAU : détail énergie ----------------
+        ventes_energie = (
+            df_filtered
+            .groupby(["agent", "energie"])
+            .size()
+            .unstack(fill_value=0)
+            .reset_index()
+        )
+    
+        # Sécurisation colonnes (au cas où ELEC ou GAZ absent)
+        if "ELEC" not in ventes_energie.columns:
+            ventes_energie["ELEC"] = 0
+        if "GAZ" not in ventes_energie.columns:
+            ventes_energie["GAZ"] = 0
+    
+        # ---------------- MERGE ----------------
+        ventes_agent = ventes_agent.merge(ventes_energie, on="agent", how="left").fillna(0)
+    
+        # ---------------- KPI ----------------
+        ventes_agent["taux"] = ventes_agent["ventes"] / obj_agent
+        ventes_agent["kpi"] = ventes_agent["ventes"] / jours if jours else 0
+    
+        # Tri
+        ventes_agent = ventes_agent.sort_values("taux", ascending=False)
+    
+        # ---------------- AFFICHAGE ----------------
+        for _, r in ventes_agent.iterrows():
+    
+            v_total = int(r["ventes"])
+            v_elec = int(r["ELEC"])
+            v_gaz = int(r["GAZ"])
+            taux = r["taux"]
+    
+            c1, c2, c3, c4 = st.columns([3, 5, 4, 2])
+    
+            # Nom agent
             c1.write(r["agent"])
-            c2.progress(min(r["taux"],1.0))
-            c3.write(f"{emoji(r['taux'])} {r['ventes']}/{obj_agent}")
+    
+            # Progression
+            c2.progress(min(taux, 1.0))
+    
+            # Détail ventes (NOUVEAU FORMAT)
+            c3.markdown(
+                f"⚡ {v_elec} &nbsp;&nbsp; "
+                f"🔥 {v_gaz} &nbsp;&nbsp; "
+                f"🎯 {v_total}/{obj_agent} &nbsp;&nbsp; "
+                f"{emoji(taux)} {taux:.0%}",
+                unsafe_allow_html=True
+            )
+    
+            # KPI (inchangé)
             c4.write(f"📅 {round(r['kpi'],1)}/J")
-
     # ================= OBJECTIFS =================
     elif page=="🎯 Objectifs":
 
