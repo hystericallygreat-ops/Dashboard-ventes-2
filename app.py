@@ -180,73 +180,73 @@ if uploaded_file:
                 )
 
     # ================= AGENTS =================
-    elif page == "👤 Agents":
-    
-        st.header("👤 Performance Agents")
-        st.markdown("<br>", unsafe_allow_html=True)
-    
-        jours = get_working_days()
-        obj_agent = math.ceil(185 * 0.75)
-    
-        # ---------------- DATA ----------------
-        ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
-    
-        ventes_energie = (
-            df_filtered
-            .groupby(["agent", "energie"])
-            .size()
-            .unstack(fill_value=0)
-            .reset_index()
+elif page == "👤 Agents":
+
+    st.header("👤 Performance Agents")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    jours = get_working_days()
+    obj_agent = math.ceil(185 * 0.75)
+
+    # ---------------- DATA ----------------
+    ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
+
+    ventes_energie = (
+        df_filtered
+        .groupby(["agent", "energie"])
+        .size()
+        .unstack(fill_value=0)
+        .reset_index()
+    )
+
+    if "ELEC" not in ventes_energie.columns:
+        ventes_energie["ELEC"] = 0
+    if "GAZ" not in ventes_energie.columns:
+        ventes_energie["GAZ"] = 0
+
+    ventes_agent = ventes_agent.merge(ventes_energie, on="agent", how="left").fillna(0)
+
+    ventes_agent["taux"] = ventes_agent["ventes"] / obj_agent
+    ventes_agent["kpi"] = ventes_agent["ventes"] / jours if jours else 0
+
+    ventes_agent = ventes_agent.sort_values("taux", ascending=False)
+
+    # ---------------- AFFICHAGE ----------------
+    for _, r in ventes_agent.iterrows():
+
+        agent = r["agent"]
+        v_total = int(r["ventes"])
+        v_elec = int(r["ELEC"])
+        v_gaz = int(r["GAZ"])
+        taux = r["taux"]
+        kpi = r["kpi"]
+
+        # 🔥 ALIGNEMENT STREAMLIT NATIF (FIABLE)
+        c1, c2, c3, c4, c5, c6 = st.columns([3, 6, 1.5, 1.5, 2, 1.5])
+
+        # Agent
+        c1.write(agent)
+
+        # Progress bar
+        c2.progress(min(taux, 1.0))
+
+        # ⚡ Elec
+        c3.markdown(f"<div style='text-align:right;font-variant-numeric:tabular-nums;'>⚡ {v_elec}</div>", unsafe_allow_html=True)
+
+        # 🔥 Gaz
+        c4.markdown(f"<div style='text-align:right;font-variant-numeric:tabular-nums;'>🔥 {v_gaz}</div>", unsafe_allow_html=True)
+
+        # 🎯 Total
+        c5.markdown(
+            f"<div style='text-align:right;font-variant-numeric:tabular-nums;'>🎯 {v_total}/{obj_agent}</div>",
+            unsafe_allow_html=True
         )
-    
-        if "ELEC" not in ventes_energie.columns:
-            ventes_energie["ELEC"] = 0
-        if "GAZ" not in ventes_energie.columns:
-            ventes_energie["GAZ"] = 0
-    
-        ventes_agent = ventes_agent.merge(ventes_energie, on="agent", how="left").fillna(0)
-    
-        ventes_agent["taux"] = ventes_agent["ventes"] / obj_agent
-        ventes_agent["kpi"] = ventes_agent["ventes"] / jours if jours else 0
-    
-        ventes_agent = ventes_agent.sort_values("taux", ascending=False)
-    
-        # ---------------- AFFICHAGE ----------------
-        for _, r in ventes_agent.iterrows():
-    
-            agent = r["agent"]
-            v_total = int(r["ventes"])
-            v_elec = int(r["ELEC"])
-            v_gaz = int(r["GAZ"])
-            taux = r["taux"]
-            kpi = r["kpi"]
-    
-            # 🔥 ALIGNEMENT STREAMLIT NATIF (FIABLE)
-            c1, c2, c3, c4, c5, c6 = st.columns([3, 6, 1.5, 1.5, 2, 1.5])
-    
-            # Agent
-            c1.write(agent)
-    
-            # Progress bar
-            c2.progress(min(taux, 1.0))
-    
-            # ⚡ Elec
-            c3.markdown(f"<div style='text-align:right;font-variant-numeric:tabular-nums;'>⚡ {v_elec}</div>", unsafe_allow_html=True)
-    
-            # 🔥 Gaz
-            c4.markdown(f"<div style='text-align:right;font-variant-numeric:tabular-nums;'>🔥 {v_gaz}</div>", unsafe_allow_html=True)
-    
-            # 🎯 Total
-            c5.markdown(
-                f"<div style='text-align:right;font-variant-numeric:tabular-nums;'>🎯 {v_total}/{obj_agent}</div>",
-                unsafe_allow_html=True
-            )
-    
-            # 📅 KPI
-            c6.markdown(
-                f"<div style='text-align:right;font-variant-numeric:tabular-nums;'>📅 {round(kpi,1)}/J</div>",
-                unsafe_allow_html=True
-            )
+
+        # 📅 KPI
+        c6.markdown(
+            f"<div style='text-align:right;font-variant-numeric:tabular-nums;'>📅 {round(kpi,1)}/J</div>",
+            unsafe_allow_html=True
+        )
     # ================= OBJECTIFS =================
     elif page=="🎯 Objectifs":
 
