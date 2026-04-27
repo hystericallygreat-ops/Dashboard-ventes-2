@@ -180,126 +180,126 @@ if uploaded_file:
                 )
 
     # ================= AGENTS =================
-        elif page == "👤 Agents":
-        
-            st.header("👤 Performance Agents")
-            st.markdown("<br>", unsafe_allow_html=True)
-        
-            jours = get_working_days()
-            obj_agent = math.ceil(185 * 0.75)
-        
-            # ---------------- DATA ----------------
-            ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
-        
-            ventes_energie = (
-                df_filtered
-                .groupby(["agent", "energie"])
-                .size()
-                .unstack(fill_value=0)
-                .reset_index()
-            )
-        
-            if "ELEC" not in ventes_energie.columns:
-                ventes_energie["ELEC"] = 0
-            if "GAZ" not in ventes_energie.columns:
-                ventes_energie["GAZ"] = 0
-        
-            ventes_agent = ventes_agent.merge(ventes_energie, on="agent", how="left").fillna(0)
-        
-            ventes_agent["taux"] = ventes_agent["ventes"] / obj_agent
-            ventes_agent["kpi"] = ventes_agent["ventes"] / jours if jours else 0
-        
-            ventes_agent = ventes_agent.sort_values("taux", ascending=False)
-        
-            # ---------------- CSS FIX ALIGNEMENT NUMÉRIQUE ----------------
-            st.markdown("""
-            <style>
-        
-            .row {
-                display: flex;
-                align-items: center;
-                gap: 14px;
-                padding: 6px 0;
-            }
-        
-            .name {
-                width: 260px;
-                font-weight: 500;
-                white-space: nowrap;
-            }
-        
-            .bar {
-                flex: 1;
-                min-width: 180px;
-            }
-        
-            .num {
-                width: 85px;
-                text-align: right;
-        
-                /* 🔥 FIX CRITIQUE ALIGNEMENT CHIFFRES */
-                font-variant-numeric: tabular-nums;
-                font-family: "Arial", sans-serif;
-                white-space: nowrap;
-            }
-        
-            .kpi {
-                width: 70px;
-                text-align: right;
-                font-variant-numeric: tabular-nums;
-                white-space: nowrap;
-            }
-        
-            .bar-bg {
-                background: #E5E7EB;
-                height: 10px;
-                border-radius: 6px;
-                overflow: hidden;
-            }
-        
-            .bar-fill {
-                height: 10px;
-                background: #0F8BC6;
-                border-radius: 6px;
-            }
-        
-            </style>
-            """, unsafe_allow_html=True)
-        
-            # ---------------- HEADER ----------------
-            st.markdown("**Agent | Progression | ⚡ | 🔥 | 🎯 Total | 📅 KPI**")
-        
-            # ---------------- LIGNES ----------------
-            for _, r in ventes_agent.iterrows():
-        
-                agent = r["agent"]
-                v_total = int(r["ventes"])
-                v_elec = int(r["ELEC"])
-                v_gaz = int(r["GAZ"])
-                taux = r["taux"]
-                kpi = r["kpi"]
-        
-                st.markdown(f"""
-                <div class="row">
-        
-                    <div class="name">{agent}</div>
-        
-                    <div class="bar">
-                        <div class="bar-bg">
-                            <div class="bar-fill" style="width:{min(taux,1)*100}%"></div>
-                        </div>
+    elif page == "👤 Agents":
+    
+        st.header("👤 Performance Agents")
+        st.markdown("<br>", unsafe_allow_html=True)
+    
+        jours = get_working_days()
+        obj_agent = math.ceil(185 * 0.75)
+    
+        # ---------------- DATA ----------------
+        ventes_agent = df_filtered.groupby("agent").size().reset_index(name="ventes")
+    
+        ventes_energie = (
+            df_filtered
+            .groupby(["agent", "energie"])
+            .size()
+            .unstack(fill_value=0)
+            .reset_index()
+        )
+    
+        if "ELEC" not in ventes_energie.columns:
+            ventes_energie["ELEC"] = 0
+        if "GAZ" not in ventes_energie.columns:
+            ventes_energie["GAZ"] = 0
+    
+        ventes_agent = ventes_agent.merge(ventes_energie, on="agent", how="left").fillna(0)
+    
+        ventes_agent["taux"] = ventes_agent["ventes"] / obj_agent
+        ventes_agent["kpi"] = ventes_agent["ventes"] / jours if jours else 0
+    
+        ventes_agent = ventes_agent.sort_values("taux", ascending=False)
+    
+        # ---------------- CSS FIX ALIGNEMENT NUMÉRIQUE ----------------
+        st.markdown("""
+        <style>
+    
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 6px 0;
+        }
+    
+        .name {
+            width: 260px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+    
+        .bar {
+            flex: 1;
+            min-width: 180px;
+        }
+    
+        .num {
+            width: 85px;
+            text-align: right;
+    
+            /* 🔥 FIX CRITIQUE ALIGNEMENT CHIFFRES */
+            font-variant-numeric: tabular-nums;
+            font-family: "Arial", sans-serif;
+            white-space: nowrap;
+        }
+    
+        .kpi {
+            width: 70px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+    
+        .bar-bg {
+            background: #E5E7EB;
+            height: 10px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+    
+        .bar-fill {
+            height: 10px;
+            background: #0F8BC6;
+            border-radius: 6px;
+        }
+    
+        </style>
+        """, unsafe_allow_html=True)
+    
+        # ---------------- HEADER ----------------
+        st.markdown("**Agent | Progression | ⚡ | 🔥 | 🎯 Total | 📅 KPI**")
+    
+        # ---------------- LIGNES ----------------
+        for _, r in ventes_agent.iterrows():
+    
+            agent = r["agent"]
+            v_total = int(r["ventes"])
+            v_elec = int(r["ELEC"])
+            v_gaz = int(r["GAZ"])
+            taux = r["taux"]
+            kpi = r["kpi"]
+    
+            st.markdown(f"""
+            <div class="row">
+    
+                <div class="name">{agent}</div>
+    
+                <div class="bar">
+                    <div class="bar-bg">
+                        <div class="bar-fill" style="width:{min(taux,1)*100}%"></div>
                     </div>
-        
-                    <div class="num">⚡ {v_elec}</div>
-        
-                    <div class="num">🔥 {v_gaz}</div>
-        
-                    <div class="num">🎯 {v_total}/{obj_agent}</div>
-        
-                    <div class="kpi">📅 {round(kpi,1)}</div>
-        
                 </div>
-                """, unsafe_allow_html=True)
+    
+                <div class="num">⚡ {v_elec}</div>
+    
+                <div class="num">🔥 {v_gaz}</div>
+    
+                <div class="num">🎯 {v_total}/{obj_agent}</div>
+    
+                <div class="kpi">📅 {round(kpi,1)}</div>
+    
+            </div>
+            """, unsafe_allow_html=True)
     # ================= OBJECTIFS =================
     elif page=="🎯 Objectifs":
 
