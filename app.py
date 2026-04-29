@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import FancyBboxPatch
 
-st.set_page_config(page_title="Dashboard", layout="wide")
+st.set_page_config(page_title="HelloWatt Dashboard", layout="wide")
 
 # ================================================================
 # CSS
@@ -195,7 +195,7 @@ def generate_rapport_png(df_obj_render, dates):
         transform=ax_table.transAxes, clip_on=False
     )
     ax_table.add_patch(header_rect)
-    ax_table.text(0.02, 0.945, "Dashboard", transform=ax_table.transAxes,
+    ax_table.text(0.02, 0.945, "HelloWatt", transform=ax_table.transAxes,
                   fontsize=15, fontweight="bold", color="white", va="center")
 
     if len(dates) == 2:
@@ -316,7 +316,7 @@ def generate_rapport_png(df_obj_render, dates):
 # ================================================================
 # HEADER
 # ================================================================
-st.title("Dashboard")
+st.title("HelloWatt - Dashboard")
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ================================================================
@@ -463,22 +463,23 @@ if uploaded_file:
             f"<div class='metric-label'>Ventes Gaz / Objectif Gaz</div>"
             f"</div>", unsafe_allow_html=True
         )
+        # Rangée du bas alignée sous la rangée du haut : Total | Elec | Gaz
         c4.markdown(
+            f"<div class='metric-card'>"
+            f"<div class='metric-value'>{emoji(taux_global)} {taux_global:.0%}</div>"
+            f"<div class='metric-label'>% Total</div>"
+            f"</div>", unsafe_allow_html=True
+        )
+        c5.markdown(
             f"<div class='metric-card'>"
             f"<div class='metric-value'>{emoji(taux_elec)} {taux_elec:.0%}</div>"
             f"<div class='metric-label'>% Elec</div>"
             f"</div>", unsafe_allow_html=True
         )
-        c5.markdown(
+        c6.markdown(
             f"<div class='metric-card'>"
             f"<div class='metric-value'>{emoji(taux_gaz)} {taux_gaz:.0%}</div>"
             f"<div class='metric-label'>% Gaz</div>"
-            f"</div>", unsafe_allow_html=True
-        )
-        c6.markdown(
-            f"<div class='metric-card'>"
-            f"<div class='metric-value'>{emoji(taux_global)} {taux_global:.0%}</div>"
-            f"<div class='metric-label'>% Total</div>"
             f"</div>", unsafe_allow_html=True
         )
 
@@ -501,23 +502,6 @@ if uploaded_file:
             obj_row = objectifs[objectifs["Fournisseur"] == row["Fournisseur"]]
             df_obj_export.at[idx, "obj_elec"] = obj_row["Objectif Elec"].sum()
             df_obj_export.at[idx, "obj_gaz"] = obj_row["Objectif Gaz"].sum()
-
-        # Boutons export
-        _, btn_col2, btn_col3 = st.columns([2, 1, 1])
-
-        with btn_col2:
-            png_bytes = generate_rapport_png(df_obj_export, dates if len(dates) == 2 else [])
-            st.download_button(
-                label="⬇️ Télécharger PNG",
-                data=png_bytes,
-                file_name=f"hellowatt_rapport_{datetime.today().strftime('%Y%m%d')}.png",
-                mime="image/png",
-                use_container_width=True
-            )
-
-        with btn_col3:
-            st.button("📋 Copier image", key="copy_btn", use_container_width=True,
-                      help="Copie le tableau en image dans le presse-papiers")
 
         # Construction des lignes HTML du tableau
         n_rows = len(df_obj)
@@ -547,12 +531,37 @@ if uploaded_file:
               </td>
             </tr>"""
 
+        # Points 2 & 3 — Boutons natifs HTML dans l'iframe + html2canvas
+        # Le téléchargement PNG et la copie sont gérés entièrement côté client
+        # depuis le tableau affiché — sans matplotlib, sans appel au parent Streamlit
+        fname = f"rapport_{datetime.today().strftime('%Y%m%d')}.png"
         html2canvas_component = f"""
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<div id="rapport-table" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#FFFFFF;border-radius:12px;overflow:hidden;border:1px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-top:4px;">
-  <div style="background:#0F8BC6;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;">
-    <span style="color:white;font-size:18px;font-weight:700;letter-spacing:0.5px;">Dashboard</span>
-    <span style="color:rgba(255,255,255,0.85);font-size:12px;">📅 {d_start} → {d_end}</span>
+
+<style>
+  body {{ margin:0; padding:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }}
+  .btn-bar {{
+    display:flex; gap:8px; justify-content:flex-end;
+    margin-bottom:8px;
+  }}
+  .btn-export {{
+    padding:7px 16px; border:none; border-radius:8px; cursor:pointer;
+    font-size:13px; font-weight:600; transition:opacity .15s;
+  }}
+  .btn-export:hover {{ opacity:0.85; }}
+  .btn-dl  {{ background:#0F8BC6; color:#fff; }}
+  .btn-cp  {{ background:#F1F5F9; color:#334155; border:1px solid #CBD5E1; }}
+</style>
+
+<div class="btn-bar">
+  <button class="btn-export btn-cp" onclick="doCapture('copy')">📋 Copier</button>
+  <button class="btn-export btn-dl" onclick="doCapture('download')">⬇️ Télécharger PNG</button>
+</div>
+
+<div id="rapport-table" style="background:#FFFFFF;border-radius:12px;overflow:hidden;border:1px solid #E2E8F0;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+  <div style="background:#0F8BC6;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
+    <span style="color:rgba(255,255,255,0.9);font-size:12px;font-weight:500;">📅 {d_start} → {d_end}</span>
+    <span style="color:rgba(255,255,255,0.7);font-size:11px;">{datetime.today().strftime('%d/%m/%Y')}</span>
   </div>
   <table style="width:100%;border-collapse:collapse;font-size:13px;">
     <thead>
@@ -567,39 +576,48 @@ if uploaded_file:
     </thead>
     <tbody>{table_html_rows}</tbody>
   </table>
-  <div style="background:#F8FAFC;padding:8px 18px;border-top:1px solid #E2E8F0;text-align:right;">
+  <div style="background:#F8FAFC;padding:6px 16px;border-top:1px solid #E2E8F0;text-align:right;">
     <span style="color:#94A3B8;font-size:11px;">Généré le {datetime.today().strftime('%d/%m/%Y à %H:%M')}</span>
   </div>
 </div>
+
 <script>
-function tryAttachCopyButton() {{
-    const buttons = window.parent.document.querySelectorAll('button');
-    let copyBtn = null;
-    buttons.forEach(b => {{ if (b.innerText && b.innerText.includes('Copier image')) copyBtn = b; }});
-    if (!copyBtn) {{ setTimeout(tryAttachCopyButton, 500); return; }}
-    if (copyBtn._hwAttached) return;
-    copyBtn._hwAttached = true;
-    copyBtn.addEventListener('click', function(e) {{
-        e.preventDefault(); e.stopPropagation();
-        const el = document.getElementById('rapport-table');
-        html2canvas(el, {{ backgroundColor: '#FFFFFF', scale: 2, useCORS: true }}).then(canvas => {{
-            canvas.toBlob(blob => {{
-                navigator.clipboard.write([new ClipboardItem({{'image/png': blob}})]).then(() => {{
-                    const orig = copyBtn.innerText;
-                    copyBtn.innerText = '✅ Copié !';
-                    setTimeout(() => {{ copyBtn.innerText = orig; }}, 2000);
-                }}).catch(() => {{
-                    const url = URL.createObjectURL(blob);
-                    window.open(url, '_blank');
-                }});
+function doCapture(action) {{
+  const el = document.getElementById('rapport-table');
+  html2canvas(el, {{ backgroundColor: '#FFFFFF', scale: 2, useCORS: true, logging: false }})
+    .then(canvas => {{
+      if (action === 'download') {{
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/png');
+        a.download = '{fname}';
+        a.click();
+      }} else {{
+        canvas.toBlob(blob => {{
+          navigator.clipboard.write([new ClipboardItem({{'image/png': blob}})])
+            .then(() => {{
+              const btn = document.querySelector('.btn-cp');
+              const orig = btn.textContent;
+              btn.textContent = '✅ Copié !';
+              btn.style.background = '#DCFCE7';
+              btn.style.color = '#16A34A';
+              setTimeout(() => {{
+                btn.textContent = orig;
+                btn.style.background = '';
+                btn.style.color = '';
+              }}, 2000);
+            }})
+            .catch(() => {{
+              // Fallback Chrome si clipboard API refusée : ouvre dans un onglet
+              const url = URL.createObjectURL(blob);
+              window.open(url, '_blank');
             }});
         }});
-    }}, true);
+      }}
+    }});
 }}
-tryAttachCopyButton();
 </script>"""
 
-        components.html(html2canvas_component, height=n_rows * 38 + 130, scrolling=False)
+        components.html(html2canvas_component, height=n_rows * 38 + 160, scrolling=False)
 
     # ================================================================
     # PAGE AGENTS
