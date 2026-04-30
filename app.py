@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import FancyBboxPatch
 
-st.set_page_config(page_title="HelloWatt Dashboard", layout="wide")
+st.set_page_config(page_title="Dashboard", layout="wide")
 
 # ================================================================
 # CSS
@@ -195,7 +195,7 @@ def generate_rapport_png(df_obj_render, dates):
         transform=ax_table.transAxes, clip_on=False
     )
     ax_table.add_patch(header_rect)
-    ax_table.text(0.02, 0.945, "HelloWatt", transform=ax_table.transAxes,
+    ax_table.text(0.02, 0.945, "Dashboard", transform=ax_table.transAxes,
                   fontsize=15, fontweight="bold", color="white", va="center")
 
     if len(dates) == 2:
@@ -316,7 +316,7 @@ def generate_rapport_png(df_obj_render, dates):
 # ================================================================
 # HEADER
 # ================================================================
-st.title("HelloWatt - Dashboard")
+st.title("Dashboard")
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ================================================================
