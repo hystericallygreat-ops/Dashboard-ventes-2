@@ -399,13 +399,13 @@ if uploaded_file:
         if uploaded_file_admin:
             with open(SAVE_PATH, "wb") as f:
                 f.write(uploaded_file_admin.getbuffer())
+            load_data.clear()
             st.rerun()
         if os.path.exists(SAVE_PATH):
             if st.sidebar.button("🗑 Supprimer"):
                 os.remove(SAVE_PATH)
+                load_data.clear()
                 st.rerun()
-
-    # ---- FILTRE DATAFRAME ----
     df_filtered = df[
         df["agent"].isin(agents) &
         df["get_provider"].isin(fournisseurs) &
@@ -531,17 +531,16 @@ if uploaded_file:
               </td>
             </tr>"""
 
-        # Points 2 & 3 — Boutons natifs HTML dans l'iframe + html2canvas
-        # Le téléchargement PNG et la copie sont gérés entièrement côté client
-        # depuis le tableau affiché — sans matplotlib, sans appel au parent Streamlit
+        # Boutons export — visibles uniquement pour l'admin
         fname = f"rapport_{datetime.today().strftime('%Y%m%d')}.png"
+        show_buttons = "flex" if is_admin else "none"
         html2canvas_component = f"""
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
   body {{ margin:0; padding:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }}
   .btn-bar {{
-    display:flex; gap:8px; justify-content:flex-end;
+    display:{show_buttons}; gap:8px; justify-content:flex-end;
     margin-bottom:8px;
   }}
   .btn-export {{
