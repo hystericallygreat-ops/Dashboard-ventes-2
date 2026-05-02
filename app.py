@@ -20,6 +20,8 @@ st.set_page_config(
 )
 
 # ================================================================
+# PALETTE — inspirée site énergie bleu/orange
+# ================================================================
 # Bleu principal : #00AEEF  Bleu foncé : #005F8E  Bleu clair : #E6F4FB
 # Orange accent  : #00AEEF  Orange clair : #E6F4FB
 # Vert succès    : #00C48C  Rouge danger : #FF4757  Jaune warning: #FFB300
@@ -37,13 +39,13 @@ html, body, [class*="css"] {
     padding-top: 1.5rem !important;
     padding-bottom: 2rem !important;
     max-width: 1400px;
-    background: #F4F9FC !important;
+    background: #F0F6FA !important;
 }
 
-/* ---- SIDEBAR BLANCHE HELLOWATT ---- */
+/* ---- SIDEBAR CONTRASTE HELLOWATT ---- */
 section[data-testid="stSidebar"] {
-    background: #FFFFFF !important;
-    border-right: 1px solid #DCEEF8 !important;
+    background: #C8E8F5 !important;
+    border-right: 2px solid #6CC0E0 !important;
 }
 section[data-testid="stSidebar"] * {
     color: #1A3A5C !important;
@@ -76,13 +78,13 @@ section[data-testid="stSidebar"] .stMarkdown h3 {
 section[data-testid="stSidebar"] .stMultiSelect > div,
 section[data-testid="stSidebar"] .stDateInput > div,
 section[data-testid="stSidebar"] .stTextInput > div {
-    background: #F8FBFD !important;
-    border: 1px solid #DCEEF8 !important;
+    background: #FFFFFF !important;
+    border: 1px solid #B8DFF0 !important;
     border-radius: 8px !important;
 }
 section[data-testid="stSidebar"] [data-baseweb="tag"] {
-    background: #E6F4FB !important;
-    color: #1AABDB !important;
+    background: #B8DFF0 !important;
+    color: #1A3A5C !important;
     border-radius: 4px !important;
     font-weight: 600 !important;
 }
@@ -103,7 +105,7 @@ section[data-testid="stSidebar"] input[type="password"] {
     justify-content: space-between;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
-    border-bottom: 2px solid #E6F4FB;
+    border-bottom: 2px solid #C8E6F5;
 }
 .page-header-left h1 {
     font-size: 1.6rem !important;
@@ -134,12 +136,12 @@ section[data-testid="stSidebar"] input[type="password"] {
 }
 .metric-card {
     background: #FFFFFF;
-    border: 1px solid #E6F4FB;
+    border: 1px solid #C8E6F5;
     border-radius: 14px;
     padding: 18px 20px;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(26,171,219,0.08), 0 4px 16px rgba(26,171,219,0.04);
+    box-shadow: 0 2px 8px rgba(26,171,219,0.12), 0 6px 20px rgba(26,171,219,0.07);
     transition: transform 0.15s, box-shadow 0.15s;
     margin-bottom: 12px;
     text-align: center;
@@ -248,14 +250,14 @@ section[data-testid="stSidebar"] input[type="password"] {
 /* ---- PROVIDER ROWS ---- */
 .provider-row {
     background: #FFFFFF;
-    border: 1px solid #F1F5F9;
+    border: 1px solid #C8E6F5;
     border-radius: 10px;
     padding: 8px 14px;
     margin-bottom: 5px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    box-shadow: 0 1px 4px rgba(26,171,219,0.08);
 }
 .provider-row:nth-child(even) {
-    background: #F8FAFF;
+    background: #F5FAFD;
 }
 
 /* ---- PERIOD BANNER ---- */
@@ -274,8 +276,8 @@ section[data-testid="stSidebar"] input[type="password"] {
 
 /* ---- SIDEBAR PERIOD ---- */
 .sb-period {
-    background: #E6F4FB;
-    border: 1px solid #DCEEF8;
+    background: #FFFFFF;
+    border: 1px solid #B8DFF0;
     border-radius: 10px;
     padding: 10px 12px;
     font-size: 0.82rem;
@@ -284,8 +286,8 @@ section[data-testid="stSidebar"] input[type="password"] {
     text-align: center;
 }
 .sb-summary {
-    background: #E6F4FB;
-    border: 1px solid #DCEEF8;
+    background: #FFFFFF;
+    border: 1px solid #B8DFF0;
     border-radius: 10px;
     padding: 10px 12px;
     font-size: 0.8rem;
@@ -902,17 +904,17 @@ function doCapture(action) {{
                 c1.markdown(f"<div style='font-size:1.2rem;text-align:center;padding-top:4px'>{badge}</div>",
                             unsafe_allow_html=True)
                 c2.markdown(
-                    f"<div style='font-weight:700;color:#1A3A5C;font-size:0.9rem;padding-top:6px'>{r['agent']}</div>"
-                    f"<div style='margin-top:2px'>{sb}</div>",
+                    f"<div style='font-weight:700;color:#1A3A5C;font-size:0.9rem;padding-top:6px'>{r['agent']}</div>",
                     unsafe_allow_html=True
                 )
                 c3.progress(min(taux, 1.0))
                 c4.markdown(
                     f"<div style='font-size:0.85rem;color:#334155;padding-top:4px'>"
                     f"⚡ <strong>{v_elec}</strong> &nbsp; 🔥 <strong>{v_gaz}</strong>"
-                    f" &nbsp;&nbsp; 🎯 <strong style='color:#00AEEF'>{v_total}</strong>"
+                    f" &nbsp;&nbsp; 🎯 <strong style='color:#1AABDB'>{v_total}</strong>"
                     f"<span style='color:#94A3B8'>/{obj_agent}</span>"
                     f" &nbsp; <strong style='color:{cp}'>{taux:.0%}</strong>"
+                    f" &nbsp; {sb}"
                     f"</div>",
                     unsafe_allow_html=True
                 )
